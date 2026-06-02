@@ -1,0 +1,201 @@
+﻿using Janitor.Metadata;
+using Janitor.Pack2FileSystem;
+using RedFox.GameExtraction;
+using RedFox.Graphics3D;
+using RedFox.Graphics3D.Rendering.Materials;
+using Silk.NET.Vulkan;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Text;
+
+namespace Janitor.AssetHandling;
+
+public class MaterialResourceHandler : IAssetHandler
+{
+    /// <inheritdoc/>
+    public bool CanHandle(Asset asset)
+    {
+        if (asset.Source is not Pack2Source)
+            return false;
+        if (asset.DataSource is not Pack2File)
+            return false;
+        if (!asset.Name.EndsWith(".material", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
+    }
+
+    public static readonly string[] DefaultValue = new string[] { ".png" };
+
+    /// <inheritdoc/>
+    public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
+    {
+        var relativeImages = context.ExportConfiguration.GetOption("RelativeImages", false);
+        var material = result.GetData<Material>();
+        var manager = context.GetRequiredService<ImageTranslatorService>().Manager;
+        var fullPath = Path.Combine(context.ExportConfiguration.OutputDirectory, result.Asset.Name);
+        var imageFormats = context.ExportConfiguration.GetOption("ImageFormats", DefaultValue);
+
+        TextureResourceHandler.ExportMaterialImages(material.EnumerateChildren<Texture>(), imageFormats, manager, fullPath, relativeImages, true);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AssetReadResult> ReadAsync(Asset asset, AssetReadContext context, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (asset.Source is not Pack2Source)
+            throw new NotSupportedException("Only Pack2Source assets are supported.");
+        if (asset.DataSource is not Pack2File file)
+            throw new NotSupportedException("Only Pack2File data sources are supported.");
+
+        using var reader = new BinaryReader(file.Open());
+
+        var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
+        var material = new Material(Path.GetFileNameWithoutExtension(asset.Name));
+
+        var magic = reader.ReadUInt32();
+        if (magic != 0x12)
+            throw new InvalidDataException($"Invalid material resource version: 0x{magic:X8}.");
+
+        var settingsCount = reader.ReadInt32();
+        for (int i = 0; i < settingsCount; i++)
+        {
+            // I need a better understanding on how these multiple tables
+            // tie in, might be the multiple variants in the mesh data?
+            var table = ReadKeyValueStorage(reader);
+
+            // For now - let's just take the first table
+            material.Attributes ??= table;
+        }
+
+        // Need to look into this
+        var extensionCount = reader.ReadInt32();
+        for (int i = 0; i < extensionCount; i++)
+        {
+            var extensionType = reader.ReadInt32();
+            var shaderResourceId = reader.ReadUInt64();
+            var extensionSettings = ReadKeyValueStorage(reader);
+        }
+
+        // TODO: Again need to see how these are tied into mesh
+        // does the game just draw each of these on top? Notice
+        // a face material might have sub-material for pores/detail
+        var subMaterialCount = reader.ReadInt32();
+        for (int i = 0; i < subMaterialCount; i++)
+        {
+            var subMaterialResourceId = reader.ReadUInt64();
+        }
+
+        var textureCount = reader.ReadInt32();
+        var textureTable = new Texture?[textureCount];
+        var textureMap = new Dictionary<ulong, Texture>();
+
+        for (int i = 0; i < textureCount; i++)
+        {
+            var textureResourceId = reader.ReadUInt64();
+
+            if (!textureMap.TryGetValue(textureResourceId, out var texture))
+            {
+                if (!resourceTable.TryGetValue(textureResourceId, out var textureFile))
+                    continue;
+                if (textureFile.Data is not Asset textureAsset)
+                    continue;
+
+                var textureResult = await context.AssetManager.ReadAsync(textureAsset, cancellationToken);
+
+                texture = new Texture(textureFile.FullPath)
+                {
+                    ImageLoader = Pack2FileImageLoader.Shared,
+                    UserData = textureFile
+                };
+
+                textureTable[i] = texture;
+                textureMap[textureResourceId] = texture;
+                material.AddNode(texture);
+            }
+
+            textureTable[i] = texture;
+        }
+
+        // Finally bind the materials/textures
+        if (material.TryGetAttribute<int>("ColorMap", out var colorMapIndex))
+        {
+            material.DiffuseMapName = "ColorMap";
+            material.DiffuseMap = textureTable[colorMapIndex];
+        }
+        if (material.TryGetAttribute<int>("NormalMap", out var normalMapIndex))
+        {
+            material.NormalMapName = "NormalMap";
+            material.NormalMap = textureTable[normalMapIndex];
+        }
+        if (material.TryGetAttribute<int>("SpecularColorMap", out var specularColorMapIndex))
+        {
+            material.SpecularMapName = "SpecularColorMap";
+            material.SpecularMap = textureTable[specularColorMapIndex];
+        }
+
+        // Trailing material descriptor fields.
+        var name = ReadString(reader);
+        var trailingInt = reader.ReadInt32();
+        var trailingUInt = reader.ReadUInt32();
+        var flag0 = reader.ReadByte();
+        var flag1 = reader.ReadByte();
+        var flag2 = reader.ReadByte();
+        var flag3 = reader.ReadByte();
+
+        return new AssetReadResult
+        {
+            Asset = asset,
+            Handler = this,
+            Data = material,
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
+    {
+        return true;
+    }
+
+    private static Dictionary<string, object> ReadKeyValueStorage(BinaryReader reader)
+    {
+        var entryCount = reader.ReadInt32();
+        var table = new Dictionary<string, object>(entryCount);
+
+        for (int i = 0; i < entryCount; i++)
+        {
+            var key = ReadString(reader);
+            var type = reader.ReadInt32();
+
+            object value = type switch
+            {
+                0  => reader.ReadSingle(),
+                1  => new Vector2(reader.ReadSingle(), reader.ReadSingle()),
+                2  => new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                3  => new Vector4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
+                4  => reader.ReadInt32(),
+                5  => reader.ReadInt32(),
+                6  => reader.ReadInt64(),
+                12 => reader.ReadByte(),
+                16 => reader.ReadInt32(),
+                17 => (reader.ReadInt32(), reader.ReadInt32()),
+                _  => throw new InvalidDataException($"Unsupported KeyValueStorage entry type {type} for key '{key}'."),
+            };
+
+            table[key] = value;
+        }
+
+        return table;
+    }
+
+    private static string ReadString(BinaryReader reader)
+    {
+        var length = reader.ReadInt32();
+        if (length <= 0)
+            return string.Empty;
+
+        return Encoding.UTF8.GetString(reader.ReadBytes(length));
+    }
+}
