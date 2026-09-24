@@ -1,13 +1,9 @@
-﻿using Janitor.AssetHandling;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Janitor.Metadata
 {
+    /// <summary>
+    /// rend::MeshFileLayout::StreamableRegion: one buffer region in a .binfbx. The ten byte counts are
+    /// stored back to back in this order starting at <see cref="FileOffset"/> (rend::MeshBufferSet::load).
+    /// </summary>
     public struct MeshFileLayout
     {
         public required int MeshInfoVersion { get; set; }
@@ -18,11 +14,12 @@ namespace Janitor.Metadata
         public required int MeshletBytes { get; set; }
         public required int MeshletBoundsBytes { get; set; }
         public required int ClusterByteCount { get; set; }
+        public required int ClusterCpuHeaderByteCount { get; set; }
         public required int OpacityMicromapIndexBytes { get; set; }
         public required int OpacityMicromapBytes { get; set; }
         public required int OpacityMicromapUsageBytes { get; set; }
         public required int IndexStride { get; set; }
-        public required int Crc { get; set; }
+        public required int Hash { get; set; }
 
         public required bool Streamable { get; set; }
     }

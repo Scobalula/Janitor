@@ -65,7 +65,7 @@ public class SkeletonResourceHandler : IAssetHandler
         var parentIndicesOffset = offsets[1];
         var boneInfoOffset = offsets[2];
 
-        var bones = new List<SkeletonBone>(boneCount);
+        var bones = new SkeletonBone[boneCount];
 
         reader.BaseStream.Position = bindPoseOffset;
 
@@ -78,7 +78,8 @@ public class SkeletonResourceHandler : IAssetHandler
             bone.BindTransform.LocalRotation = rotation;
             bone.BindTransform.LocalPosition = new Vector3(position.X, position.Y, position.Z);
             bone.BindTransform.Scale = Vector3.One;
-            bones.Add(bone);
+
+            bones[i] = bone;
         }
 
         reader.BaseStream.Position = parentIndicesOffset;
@@ -87,7 +88,7 @@ public class SkeletonResourceHandler : IAssetHandler
         {
             var parentIndex = reader.ReadInt16();
 
-            if (parentIndex >= 0 && parentIndex < bones.Count)
+            if (parentIndex >= 0 && parentIndex < bones.Length)
                 bones[i].MoveTo(bones[parentIndex], ReparentTransformMode.PreserveLocal);
             else
                 bones[i].MoveTo(skeletonGroup, ReparentTransformMode.PreserveLocal);
@@ -96,7 +97,10 @@ public class SkeletonResourceHandler : IAssetHandler
         reader.BaseStream.Position = boneInfoOffset;
 
         for (var i = 0; i < boneCount; i++)
-            bones[i].Name = $"bone_{reader.ReadUInt32()}";
+        {
+            bones[i].UserId = reader.ReadUInt32();
+            bones[i].Name = $"bone_{bones[i].UserId}";
+        }
 
         // I don't think the game actually uses the extended info, but it contains the bone names so we need to read it to get them.
         // I think internally the game uses the hashed bone names for lookups, and the extended info is only used for debugging purposes?
@@ -112,6 +116,9 @@ public class SkeletonResourceHandler : IAssetHandler
 
         for (var i = 0; i < Math.Min(nameTableCount, boneCount); i++)
             bones[i].Name = reader.ReadUTF8NullTerminatedString(namePointers[i] + startOfNames);
+
+        // Store the original table for skinning on an attribute.
+        skeletonGroup.SetAttribute("OriginalTable", bones);
 
         return new AssetReadResult
         {

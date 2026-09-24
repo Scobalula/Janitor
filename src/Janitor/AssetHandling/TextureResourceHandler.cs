@@ -1,6 +1,6 @@
 ﻿using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
-using RedFox.Graphics2D.IO;
+using RedFox.Imaging.IO;
 using RedFox.Graphics3D;
 using SkiaSharp;
 using System;

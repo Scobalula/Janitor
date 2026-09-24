@@ -416,3 +416,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# JetBrains Rider
+*.sln.iml
+*.sln.DotSettings
+*.idea
+
+# Modern .NET Launch Settings
+launchSettings.json

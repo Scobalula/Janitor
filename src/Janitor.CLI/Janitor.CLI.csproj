@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Janitor.UI\Janitor.UI.csproj" />
+    <ProjectReference Include="..\Janitor.Factory\Janitor.Factory.csproj" />
     <ProjectReference Include="..\Janitor\Janitor.csproj" />
   </ItemGroup>
 

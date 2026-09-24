@@ -180,10 +180,19 @@ public sealed class Pack2SourceReader : IAssetSourceReader
             // Finally, add assets for all files
             foreach (var file in toc.Files)
             {
-                var asset = new Asset(file.FullPath, "asset", file, $"Size: 0x{file.Size:X}");
+                var asset = new Asset(file.FullPath, Path.GetExtension(file.Name), file, $"Size: 0x{file.Size:X}");
                 file.Data = asset;
                 toc.AddAsset(asset);
             }
+
+#if DEBUG
+            using var classWriter = new StreamWriter("classes.txt");
+
+            foreach (var resourceClass in toc.Classes)
+            {
+                classWriter.WriteLine(resourceClass);
+            }
+#endif
 
             return toc;
         }
@@ -259,6 +268,7 @@ public sealed class Pack2SourceReader : IAssetSourceReader
         public int NameOffset;
         public int NameLength;
         public long Hash;
+        public uint Padding;
     }
 
     private struct ClassEntry

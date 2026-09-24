@@ -3,25 +3,16 @@
     <Project Path="../../RedFox/src/cs/RedFox.Compression.Deflate/RedFox.Compression.Deflate.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.Compression.ZStandard/RedFox.Compression.ZStandard.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.Compression/RedFox.Compression.csproj" />
+    <Project Path="../../RedFox/src/cs/RedFox.GameExtraction.Hashing/RedFox.GameExtraction.Hashing.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.GameExtraction.UI/RedFox.GameExtraction.UI.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.GameExtraction/RedFox.GameExtraction.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics2D/RedFox.Graphics2D.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Bvh/RedFox.Graphics3D.Bvh.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Cast/RedFox.Graphics3D.Cast.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Gltf/RedFox.Graphics3D.Gltf.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.IO/RedFox.Graphics3D.IO.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.KaydaraFbx/RedFox.Graphics3D.KaydaraFbx.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Md5/RedFox.Graphics3D.Md5.csproj" />
+    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Formats/RedFox.Graphics3D.Formats.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.OpenGL/RedFox.Graphics3D.OpenGL.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Seanim/RedFox.Graphics3D.Seanim.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Semodel/RedFox.Graphics3D.Semodel.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Smd/RedFox.Graphics3D.Smd.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.WavefrontObj/RedFox.Graphics3D.WavefrontObj.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.Graphics3D/RedFox.Graphics3D.csproj" />
     <Project Path="../../RedFox/src/cs/RedFox.IO/RedFox.IO.csproj" />
   </Folder>
+  <Project Path="../../RedFox/src/cs/RedFox.Imaging/RedFox.Imaging.csproj" />
   <Project Path="Janitor.CLI/Janitor.CLI.csproj" />
   <Project Path="Janitor.Factory/Janitor.Factory.csproj" Id="cbb9517c-630f-47e7-83db-31e4488d4e25" />
-  <Project Path="Janitor.UI/Janitor.UI.csproj" />
   <Project Path="Janitor/Janitor.csproj" />
 </Solution>

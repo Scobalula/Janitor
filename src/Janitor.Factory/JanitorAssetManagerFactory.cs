@@ -32,6 +32,7 @@ public static class JanitorAssetManagerFactory
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();
         manager.RegisterService<ResourceTableService>();
+        //manager.RegisterService(NameListService.CreateFromDirectory("NameTables"));
 
         return manager;
     }

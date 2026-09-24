@@ -10,6 +10,8 @@ public class MeshAttributeBuffer
 {
     public required byte[] Buffer { get; set; }
 
+    public required int ByteOffset { get; set; }
+
     public required MeshAttribute? Attribute { get; set; }
 
     public required int Stride { get; set; }
@@ -19,7 +21,7 @@ public class MeshAttributeBuffer
         if (Attribute is null)
             return T.Zero;
 
-        var slice = Buffer.AsSpan()[((vertexIndex * Stride) + Attribute.Value.Offset)..];
+        var slice = Buffer.AsSpan()[(ByteOffset + (vertexIndex * Stride) + Attribute.Value.Offset)..];
 
         return Attribute.Value.DataType switch
         {

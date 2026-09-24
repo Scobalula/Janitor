@@ -12,6 +12,7 @@ public struct MeshPrimitive
 
     public required int FaceCount { get; set; }
 
+    public required int PositionOnlyVertexOffset { get; set; }
     public required int VertexOffset { get; set; }
 
     public required int FaceOffset { get; set; }

@@ -1,4 +1,4 @@
-﻿using RedFox.IO;
+using RedFox.IO;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -25,7 +25,25 @@ public class MeshMetadata : IMetadata
 
     public ulong SkeletonID { get; private set; }
 
+    public int CpuNumBytes { get; private set; }
+
+    public int MeshCpuBytes { get; private set; }
+
     public List<MeshFileLayout> StreamableLODs { get; } = [];
+
+    public MeshFileLayout TailLODs { get; private set; }
+
+    public int NumTailLods { get; private set; }
+
+    public List<ulong> SubMeshIDs { get; } = [];
+
+    public ulong GeometryTransformShaderID { get; private set; }
+
+    public bool HasGeometryTransformShader => GeometryTransformShaderID != 0 && GeometryTransformShaderID != ulong.MaxValue;
+
+    public int SkinnedVariantCount { get; private set; }
+
+    public MeshFileLayout GetLayoutForLod(int lodIndex) => lodIndex < StreamableLODs.Count ? StreamableLODs[lodIndex] : TailLODs;
 
     public void Parse(ReadOnlySpan<byte> buffer)
     {
@@ -73,17 +91,17 @@ public class MeshMetadata : IMetadata
         GeneratedLodBytes = reader.Read<int>();
         UserCreatedLodBytes = reader.Read<int>();
 
-        var copper = reader.Read<int>(); // ??
+        // rend::MeshFileLayout
+        _ = reader.Read<int>(); // version (3)
+        CpuNumBytes = reader.Read<int>();
+        MeshCpuBytes = reader.Read<int>();
 
-        reader.Read<int>(); // ??
-        reader.Read<int>(); // ??
+        var streamableCount = reader.Read<int>();
 
-        // streamableLODs
-        var streamableLODs = reader.Read<int>();
-
-        for (int i = 0; i < streamableLODs; i++)
+        // Streamable regions, then the tail region; each is a version (5), 12 values and a hash.
+        for (int i = 0; i <= streamableCount; i++)
         {
-            StreamableLODs.Add(new()
+            var region = new MeshFileLayout
             {
                 MeshInfoVersion = reader.Read<int>(),
                 FileOffset = reader.Read<int>(),
@@ -93,38 +111,34 @@ public class MeshMetadata : IMetadata
                 MeshletBytes = reader.Read<int>(),
                 MeshletBoundsBytes = reader.Read<int>(),
                 ClusterByteCount = reader.Read<int>(),
+                ClusterCpuHeaderByteCount = reader.Read<int>(),
                 OpacityMicromapIndexBytes = reader.Read<int>(),
                 OpacityMicromapBytes = reader.Read<int>(),
                 OpacityMicromapUsageBytes = reader.Read<int>(),
                 IndexStride = reader.Read<int>(),
-                Crc = reader.Read<int>(),
-                Streamable = true
-            });
+                Hash = reader.Read<int>(),
+                Streamable = i < streamableCount
+            };
+
+            if (region.Streamable)
+                StreamableLODs.Add(region);
+            else
+                TailLODs = region;
         }
 
-        //for (int i = 0; i < meshCount1; i++)
+        NumTailLods = reader.Read<byte>();
+
+        // ResourceIDs are serialised as u32 (1) + u64.
+        var subMeshCount = reader.Read<int>();
+
+        for (int i = 0; i < subMeshCount; i++)
         {
-            StreamableLODs.Add(new()
-            {
-                MeshInfoVersion = reader.Read<int>(),
-                FileOffset = reader.Read<int>(),
-                VertexByteCount = reader.Read<int>(),
-                PositionOnlyVertexByteCount = reader.Read<int>(),
-                IndexByteCount = reader.Read<int>(),
-                MeshletBytes = reader.Read<int>(),
-                MeshletBoundsBytes = reader.Read<int>(),
-                ClusterByteCount = reader.Read<int>(),
-                OpacityMicromapIndexBytes = reader.Read<int>(),
-                OpacityMicromapBytes = reader.Read<int>(),
-                OpacityMicromapUsageBytes = reader.Read<int>(),
-                IndexStride = reader.Read<int>(),
-                Crc = reader.Read<int>(),
-                Streamable = false
-            });
+            _ = reader.Read<int>();
+            SubMeshIDs.Add(reader.Read<ulong>());
         }
 
-        reader.Read<byte>(); // numTailLODs
-
-        //Console.WriteLine(reader.Position);
+        _ = reader.Read<int>();
+        GeometryTransformShaderID = reader.Read<ulong>();
+        SkinnedVariantCount = reader.Read<int>();
     }
 }

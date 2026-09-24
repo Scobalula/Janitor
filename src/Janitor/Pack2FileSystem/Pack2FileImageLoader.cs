@@ -1,9 +1,10 @@
-﻿using RedFox.Graphics2D;
-using RedFox.Graphics2D.IO;
+﻿using RedFox.Imaging;
+using RedFox.Imaging.IO;
 using RedFox.Graphics3D;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using RedFox.Imaging.Formats.Dds;
 
 namespace Janitor.Pack2FileSystem;
 
