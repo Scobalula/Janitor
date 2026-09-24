@@ -3,6 +3,7 @@ using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
 using RedFox.Graphics3D;
 using RedFox.Graphics3D.Rendering.Materials;
+using RedFox.IO;
 using Silk.NET.Vulkan;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,10 @@ namespace Janitor.AssetHandling;
 
 public class MaterialResourceHandler : IAssetHandler
 {
+    private const uint LegacyVersion = 0x12;
+
+    private const uint ControlResonantVersion = 0x14;
+
     /// <inheritdoc/>
     public bool CanHandle(Asset asset)
     {
@@ -55,9 +60,10 @@ public class MaterialResourceHandler : IAssetHandler
         var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
         var material = new Material(Path.GetFileNameWithoutExtension(asset.Name));
 
-        var magic = reader.ReadUInt32();
-        if (magic != 0x12)
-            throw new InvalidDataException($"Invalid material resource version: 0x{magic:X8}.");
+        var version = reader.ReadUInt32();
+
+        if (version != LegacyVersion && version != ControlResonantVersion)
+            throw new InvalidDataException($"Invalid material resource version: 0x{version:X8}.");
 
         var settingsCount = reader.ReadInt32();
         for (int i = 0; i < settingsCount; i++)
@@ -70,31 +76,13 @@ public class MaterialResourceHandler : IAssetHandler
             material.Attributes ??= table;
         }
 
-        // Need to look into this
-        var extensionCount = reader.ReadInt32();
-        for (int i = 0; i < extensionCount; i++)
-        {
-            var extensionType = reader.ReadInt32();
-            var shaderResourceId = reader.ReadUInt64();
-            var extensionSettings = ReadKeyValueStorage(reader);
-        }
-
-        // TODO: Again need to see how these are tied into mesh
-        // does the game just draw each of these on top? Notice
-        // a face material might have sub-material for pores/detail
-        var subMaterialCount = reader.ReadInt32();
-        for (int i = 0; i < subMaterialCount; i++)
-        {
-            var subMaterialResourceId = reader.ReadUInt64();
-        }
-
-        var textureCount = reader.ReadInt32();
-        var textureTable = new Texture?[textureCount];
+        var textureResourceIds = version == LegacyVersion ? ReadLegacyResources(reader) : ReadResources(reader, file);
+        var textureTable = new Texture?[textureResourceIds.Length];
         var textureMap = new Dictionary<ulong, Texture>();
 
-        for (int i = 0; i < textureCount; i++)
+        for (int i = 0; i < textureResourceIds.Length; i++)
         {
-            var textureResourceId = reader.ReadUInt64();
+            var textureResourceId = textureResourceIds[i];
 
             if (!textureMap.TryGetValue(textureResourceId, out var texture))
             {
@@ -157,6 +145,50 @@ public class MaterialResourceHandler : IAssetHandler
     public async Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
     {
         return true;
+    }
+
+    /// <summary>
+    /// Reads the extensions, sub materials and texture resource IDs stored inline in version 0x12 materials.
+    /// </summary>
+    private static ulong[] ReadLegacyResources(BinaryReader reader)
+    {
+        // Need to look into this
+        var extensionCount = reader.ReadInt32();
+        for (int i = 0; i < extensionCount; i++)
+        {
+            var extensionType = reader.ReadInt32();
+            var shaderResourceId = reader.ReadUInt64();
+            var extensionSettings = ReadKeyValueStorage(reader);
+        }
+
+        // TODO: Again need to see how these are tied into mesh
+        // does the game just draw each of these on top? Notice
+        // a face material might have sub-material for pores/detail
+        var subMaterialCount = reader.ReadInt32();
+        reader.ReadStructArray<ulong>(subMaterialCount);
+
+        var textureCount = reader.ReadInt32();
+        return reader.ReadStructArray<ulong>(textureCount).ToArray();
+    }
+
+    /// <summary>
+    /// Reads the extension settings of version 0x14 materials, whose resource IDs live in rend::MaterialMetadata.
+    /// </summary>
+    private static ulong[] ReadResources(BinaryReader reader, Pack2File file)
+    {
+        if (!file.TryParseMetadata<MaterialMetadata>("rend::MaterialMetadata", out var metadata))
+            throw new InvalidDataException($"Missing rend::MaterialMetadata on '{file.FullPath}'.");
+
+        foreach (var _ in metadata.ExtensionResourceIDs)
+        {
+            var extensionType = reader.ReadInt32();
+            var extensionSettingsCount = reader.ReadInt32();
+
+            for (int i = 0; i < extensionSettingsCount; i++)
+                ReadKeyValueStorage(reader);
+        }
+
+        return [.. metadata.TextureResourceIDs];
     }
 
     private static Dictionary<string, object> ReadKeyValueStorage(BinaryReader reader)

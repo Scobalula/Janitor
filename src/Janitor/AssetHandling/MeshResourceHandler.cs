@@ -13,6 +13,12 @@ namespace Janitor.AssetHandling;
 
 public class MeshResourceHandler : ModelHandler
 {
+    private const uint LegacyVersion = 0x4E;
+
+    private const uint MinimumVersion = 0x57;
+
+    private const uint MaximumVersion = 0x5C;
+
     private static readonly byte[] AttributeSizes = [ 0x04, 0x08, 0x0C, 0x10, 0x04, 0x04, 0x04, 0x04, 0x08, 0x04, 0x08, 0x10, 0x08, 0x08, 0x01, 0x04, 0x02, ];
 
     /// <inheritdoc/>
@@ -34,7 +40,7 @@ public class MeshResourceHandler : ModelHandler
         // * Models are flipped, looks correct data-wise, even skeleton is flipped, game must be doing some transformation in vertex shader?
         // * Currently only supporting the first variant, files will have multiple variants.
         // * Currently only parsing highest LOD.
-        // * Currently only confirmed to support Alan Wake 2, FBC may work out of pure luck, and Control looks very different.
+        // * Version 0x4E covers FBC: Firebreak and Alan Wake 2, 0x57 to 0x5C covers Control Resonant.
         if (asset.Source is not Pack2Source)
             throw new NotSupportedException("Only Pack2Source assets are supported.");
         if (asset.DataSource is not Pack2File file)
@@ -52,8 +58,8 @@ public class MeshResourceHandler : ModelHandler
 
         var version = reader.ReadUInt32();
 
-        if (version != 0x4E)
-            throw new NotSupportedException($"Mesh version {version}");
+        if (version != LegacyVersion && (version < MinimumVersion || version > MaximumVersion))
+            throw new NotSupportedException($"Mesh version 0x{version:X}");
 
         SkeletonBone[]? skeletonBones = null;
 
@@ -73,16 +79,42 @@ public class MeshResourceHandler : ModelHandler
         var skeletonLodCount = reader.ReadInt32();
         var boneSetCount = reader.ReadInt32();
 
-        var boneTableCounts = reader.ReadStructArray<int>(boneSetCount);
+        var hasGeometryTransformShader = meshMetadata.HasGeometryTransformShader;
 
-        for (var tableIndex = 0; tableIndex < boneTableCounts.Length; tableIndex++)
+        if (version == LegacyVersion)
         {
-            for (var entryIndex = 0; entryIndex < boneTableCounts[tableIndex]; entryIndex++)
+            var boneTableCounts = reader.ReadStructArray<int>(boneSetCount).ToArray();
+
+            foreach (var boneCount in boneTableCounts)
             {
-                var nameLength = reader.ReadInt32();
-                reader.BaseStream.Position += nameLength;
-                reader.BaseStream.Position += 68;
+                for (var boneIndex = 0; boneIndex < boneCount; boneIndex++)
+                {
+                    var nameLength = reader.ReadInt32();
+                    reader.BaseStream.Position += nameLength + 68;
+                }
             }
+        }
+        else
+        {
+            var boneCount = 0;
+
+            foreach (var count in reader.ReadStructArray<int>(boneSetCount))
+                boneCount += count;
+
+            reader.BaseStream.Position += 4L * boneSetCount;
+
+            var nameBufferSize = reader.ReadInt32();
+
+            if (boneSetCount > 0)
+                reader.BaseStream.Position += nameBufferSize;
+
+            reader.BaseStream.Position += 72L * boneCount;
+
+            reader.ReadUInt64();
+            var geometryTransformShaderId = reader.ReadUInt64();
+            reader.ReadUInt64();
+
+            hasGeometryTransformShader = geometryTransformShaderId is not (0 or 1 or ulong.MaxValue);
         }
 
         var boneMaps = new List<List<int>>(lodCount);
@@ -151,7 +183,7 @@ public class MeshResourceHandler : ModelHandler
         var lodSpheres = reader.ReadStructArray<Vector4>(lodCount).ToArray();
 
         // Skinning bounds (sphere + box), present when the mesh uses a geometry transform shader.
-        if (skeletonLodCount > 0 && meshMetadata.HasGeometryTransformShader)
+        if (skeletonLodCount > 0 && hasGeometryTransformShader)
             reader.BaseStream.Position += 40;
 
         var materialCount = reader.ReadInt32();
@@ -172,6 +204,10 @@ public class MeshResourceHandler : ModelHandler
                 var materialResult = await context.AssetManager.ReadAsync(materialAsset, cancellationToken);
 
                 material = materialResult.GetData<Material>();
+
+                if (scene.RootNode.TryFindChild(material.Name, out _))
+                    material.Name = $"{material.Name}_{materialResourceId:X16}";
+
                 uniqueMaterials[materialResourceId] = material;
                 scene.RootNode.AddNode(material);
             }
@@ -196,6 +232,15 @@ public class MeshResourceHandler : ModelHandler
                 MaterialIndices = reader.ReadStructArray<int>(materialIndexCount).ToArray()
             });
         }
+
+        if (version >= 0x58)
+            reader.ReadStructArray<int>(reader.ReadInt32());
+        if (version >= 0x54)
+            reader.BaseStream.Position += 1;
+        if (version >= 0x59)
+            reader.BaseStream.Position += 1;
+        if (version >= 0x5B)
+            reader.ReadBytes(reader.ReadInt32() * (version >= 0x5C ? 20 : 16));
 
         var primitiveCount = reader.ReadInt32();
         var primitives = new List<MeshPrimitive>(primitiveCount);
@@ -265,16 +310,26 @@ public class MeshResourceHandler : ModelHandler
             reader.ReadInt32();
             reader.ReadInt32();
 
-            reader.ReadInt32();
-            reader.ReadInt32();
-            reader.ReadInt32();
-            reader.ReadInt32();
+            if (version == LegacyVersion)
+            {
+                reader.ReadInt32();
+                reader.ReadInt32();
+                reader.ReadInt32();
+                reader.ReadInt32();
+            }
+            else
+            {
+                if (version >= 0x5A)
+                    reader.ReadInt32();
+
+                reader.ReadInt32();
+            }
 
             reader.ReadByte();
 
             var opacityMicromapCount = reader.ReadInt32();
 
-            reader.BaseStream.Position += 40L * opacityMicromapCount; // OpacityMicromapDataOffsets, 10 x u32 each
+            reader.BaseStream.Position += (version == LegacyVersion ? 40L : 36L) * opacityMicromapCount;
 
             primitives.Add(new MeshPrimitive()
             {

@@ -101,7 +101,7 @@ var vfs = assetManager.GetRequiredService<AssetFileSystemService>().FileSystem;
 //#endif
 
 // For now we just export .binfbx files to test the system, but eventually we will want to export all supported assets
-foreach (var file in vfs.EnumerateFiles(null, "*cash*register*.binfbx", SearchOption.AllDirectories))
+foreach (var file in vfs.EnumerateFiles(null, "dancer.binfbx", SearchOption.AllDirectories))
 {
     if (file.Data is not Asset asset)
         continue;

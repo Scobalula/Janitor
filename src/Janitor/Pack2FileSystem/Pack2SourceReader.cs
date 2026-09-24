@@ -56,6 +56,7 @@ public sealed class Pack2SourceReader : IAssetSourceReader
             Span<byte> headerBuffer = stackalloc byte[0x1000];
             stream.ReadExactly(headerBuffer);
 
+            var version                = MemoryMarshal.Read<int>(headerBuffer[4..]);
             var buffers                = MemoryMarshal.Read<int>(headerBuffer[8..]);
             var bufferCount            = MemoryMarshal.Read<int>(headerBuffer[12..]);
             var referenceEntriesOffset = MemoryMarshal.Read<int>(headerBuffer[16..]);
@@ -109,14 +110,16 @@ public sealed class Pack2SourceReader : IAssetSourceReader
 
             var directoryEntries = reader.ReadArray<DirectoryEntry>(directoryEntriesCount, directoryEntriesOffset);
             var fileEntries = reader.ReadArray<FileEntry>(fileEntriesCount, fileEntriesOffset);
-            var referenceEntries = reader.ReadArray<ReferenceEntry>(referenceEntriesCount, referenceEntriesOffset);
             var classEntries = reader.ReadArray<ClassEntry>(classEntriesCount, classEntriesOffset);
             var packFileMetaDataBuffer = reader.Read(packFileMetaDataSize, packFileMetaDataOffset);
             var fileBufferInfoBuffer = reader.Read(fileBufferInfoSize, fileBufferInfoOffset);
 
+            var referenceEntrySize = version >= 3 ? 24 : 16;
+
             for (int i = 0; i < referenceEntriesCount; i++)
             {
-                var name = reader.ReadString(stringBlockOffset + referenceEntries[i].NameOffset, referenceEntries[i].NameLength);
+                var referenceEntry = reader.Read<ReferenceEntry>(referenceEntriesOffset + i * referenceEntrySize);
+                var name = reader.ReadString(stringBlockOffset + referenceEntry.NameOffset, referenceEntry.NameLength);
                 toc.References.Add(new(Path.Combine(directory, name)));
             }
 
@@ -268,7 +271,6 @@ public sealed class Pack2SourceReader : IAssetSourceReader
         public int NameOffset;
         public int NameLength;
         public long Hash;
-        public uint Padding;
     }
 
     private struct ClassEntry
