@@ -4,7 +4,6 @@ using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
 using RedFox.Graphics3D.Buffers;
-using RedFox.Graphics3D.Groups;
 using RedFox.IO;
 using System.Numerics;
 using System.Text;
@@ -13,12 +12,6 @@ namespace Janitor.AssetHandling;
 
 public class MeshResourceHandler : ModelHandler
 {
-    private const uint LegacyVersion = 0x4E;
-
-    private const uint MinimumVersion = 0x57;
-
-    private const uint MaximumVersion = 0x5C;
-
     private static readonly byte[] AttributeSizes = [ 0x04, 0x08, 0x0C, 0x10, 0x04, 0x04, 0x04, 0x04, 0x08, 0x04, 0x08, 0x10, 0x08, 0x08, 0x01, 0x04, 0x02, ];
 
     /// <inheritdoc/>
@@ -38,8 +31,7 @@ public class MeshResourceHandler : ModelHandler
     public override async Task<AssetReadResult> ReadAsync(Asset asset, AssetReadContext context, CancellationToken cancellationToken)
     {
         // * Models are flipped, looks correct data-wise, even skeleton is flipped, game must be doing some transformation in vertex shader?
-        // * Currently only supporting the first variant, files will have multiple variants.
-        // * Currently only parsing highest LOD.
+        // * Every LOD and variant is built as its own scene, variants only swap materials so they share geometry buffers.
         // * Version 0x4E covers FBC: Firebreak and Alan Wake 2, 0x57 to 0x5C covers Control Resonant.
         if (asset.Source is not Pack2Source)
             throw new NotSupportedException("Only Pack2Source assets are supported.");
@@ -51,28 +43,26 @@ public class MeshResourceHandler : ModelHandler
         using var reader = new BinaryReader(file.Open());
 
         var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
-        var scene = new Scene(asset.Name);
+        var modelName = Path.GetFileNameWithoutExtension(asset.Name);
 
         // Files may start with a MeshCPU block (version 1, CPU-side triangle data); the mesh header follows it.
         reader.BaseStream.Position = meshMetadata.MeshCpuBytes;
 
         var version = reader.ReadUInt32();
 
-        if (version != LegacyVersion && (version < MinimumVersion || version > MaximumVersion))
+        if (version != 0x4E && (version < 0x57 || version > 0x5C))
             throw new NotSupportedException($"Mesh version 0x{version:X}");
 
-        SkeletonBone[]? skeletonBones = null;
+        SceneNode? skeletonRoot = null;
 
         if (resourceTable.TryGetValue(meshMetadata.SkeletonID, out var skeletonResource))
         {
             if (skeletonResource.Data is not Asset skeletonAsset)
                 throw new InvalidDataException($"Skeleton resource with ID 0x{meshMetadata.SkeletonID:X16} does not have an associated Asset.");
 
-            var skeletonResult = await context.AssetManager.ReadAsync(skeletonAsset, cancellationToken);
-            var skeletonRoot = skeletonResult.GetData<SceneNode>();
+            var skeletonResult = await context.ReadAsync(skeletonAsset, cancellationToken);
 
-            scene.RootNode.AddNode(skeletonResult.GetData<SceneNode>());
-            skeletonBones = skeletonRoot.GetAttribute<SkeletonBone[]>("OriginalTable");
+            skeletonRoot = skeletonResult.GetData<SceneNode>();
         }
 
         var lodCount = reader.ReadInt32();
@@ -81,7 +71,7 @@ public class MeshResourceHandler : ModelHandler
 
         var hasGeometryTransformShader = meshMetadata.HasGeometryTransformShader;
 
-        if (version == LegacyVersion)
+        if (version == 0x4E)
         {
             var boneTableCounts = reader.ReadStructArray<int>(boneSetCount).ToArray();
 
@@ -201,24 +191,24 @@ public class MeshResourceHandler : ModelHandler
                 if (materialResourceFile.Data is not Asset materialAsset)
                     throw new InvalidDataException($"Material resource with ID 0x{materialResourceId:X16} does not have an associated Asset.");
 
-                var materialResult = await context.AssetManager.ReadAsync(materialAsset, cancellationToken);
+                var materialResult = await context.ReadAsync(materialAsset, cancellationToken);
 
                 material = materialResult.GetData<Material>();
-
-                if (scene.RootNode.TryFindChild(material.Name, out _))
+
+                if (uniqueMaterials.Values.Any(x => x.Name.Equals(material.Name, StringComparison.OrdinalIgnoreCase)))
                     material.Name = $"{material.Name}_{materialResourceId:X16}";
 
                 uniqueMaterials[materialResourceId] = material;
-                scene.RootNode.AddNode(material);
             }
 
             allMaterials[materialIndex] = material;
         }
 
         var materialIndexCount = reader.ReadInt32();
+
         List<MeshVariant> variants = [new MeshVariant()
         {
-            Name = "Default",
+            Name = "default",
             MaterialIndices = reader.ReadStructArray<int>(materialIndexCount).ToArray()
         }];
 
@@ -310,7 +300,7 @@ public class MeshResourceHandler : ModelHandler
             reader.ReadInt32();
             reader.ReadInt32();
 
-            if (version == LegacyVersion)
+            if (version == 0x4E)
             {
                 reader.ReadInt32();
                 reader.ReadInt32();
@@ -329,7 +319,7 @@ public class MeshResourceHandler : ModelHandler
 
             var opacityMicromapCount = reader.ReadInt32();
 
-            reader.BaseStream.Position += (version == LegacyVersion ? 40L : 36L) * opacityMicromapCount;
+            reader.BaseStream.Position += (version == 0x4E ? 40L : 36L) * opacityMicromapCount;
 
             primitives.Add(new MeshPrimitive()
             {
@@ -358,162 +348,129 @@ public class MeshResourceHandler : ModelHandler
             throw new InvalidDataException($"Mesh header of '{file.FullPath}' ended at 0x{reader.BaseStream.Position:X}, metadata says 0x{meshMetadata.CpuNumBytes:X}.");
 
         var lods = BuildLods(meshMetadata, lodCount, primitives);
+        var scenes = new List<Scene>(lodCount * variants.Count);
 
-        for (int l = 0; l < lodCount; l++)
+        foreach (var lod in lods.Where(lod => lod.Primitives.Count > 0))
         {
-            var lodToExport = lods[l];
+            reader.BaseStream.Position = lod.Layout.FileOffset;
 
-            // Variants only swap materials (the geometry is identical), so each variant becomes its own group,
-            // and is exported as its own model, with meshes that share the default variant's buffers.
-            var variantGroups = new MeshGroup[variants.Count];
+            var vertexBytes = reader.ReadBytes(lod.Layout.VertexByteCount);
+            var positionOnlyVertexBytes = reader.ReadBytes(lod.Layout.PositionOnlyVertexByteCount);
+            var indexBytes = reader.ReadBytes(lod.Layout.IndexByteCount);
+            var boneMap = boneMaps.Count > 0 ? boneMaps[lod.Index] : [];
+            var meshes = lod.Primitives.Select(primitive => ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap)).ToArray();
 
-            for (int v = 0; v < variants.Count; v++)
+            // Variants only swap materials, so every variant of a LOD shares the same geometry buffers.
+            foreach (var variant in variants)
             {
-                var groupName = v == 0 ? $"LOD_{l}" : $"LOD_{l}_{SanitizeName(variants[v].Name)}";
-                variantGroups[v] = scene.RootNode.AddNode(new MeshGroup(groupName, SceneNodeFlags.None));
+                var sceneName = $"{modelName}_{string.Join('_', variant.Name.Split(Path.GetInvalidFileNameChars()))}_lod{lod.Index}";
+                var materials = lod.Primitives.Select(primitive => allMaterials[variant.MaterialIndices[primitive.MaterialIndex]]).ToArray();
+
+                scenes.Add(CreateScene(sceneName, meshes, materials, skeletonRoot));
             }
-
-            reader.BaseStream.Position = lodToExport.Layout.FileOffset;
-
-            var vertexBytes = reader.ReadBytes(lodToExport.Layout.VertexByteCount);
-            var positionOnlyVertexBytes = reader.ReadBytes(lodToExport.Layout.PositionOnlyVertexByteCount);
-            var indexBytes = reader.ReadBytes(lodToExport.Layout.IndexByteCount);
-
-            var faceReader = new SpanReader(indexBytes);
-
-            foreach (var primitive in lodToExport.Primitives)
-            {
-                var vertexMap = new int[primitive.VertexCount];
-
-                // Bind vertex attributes to their stream: stream 0 lives in the position-only blob,
-                // every other stream in the vertex blob. The game can store attributes in any order,
-                // and may split skin weights across several attributes.
-                MeshAttributeBuffer BindAttribute(MeshAttribute? attribute) => new()
-                {
-                    Buffer = attribute?.PositionAttribute == true ? positionOnlyVertexBytes : vertexBytes,
-                    ByteOffset = attribute?.PositionAttribute == true ? primitive.PositionOnlyVertexOffset : primitive.VertexOffset,
-                    Attribute = attribute,
-                    Stride = attribute?.PositionAttribute == true ? primitive.VertexPositionSize : primitive.VertexSize
-                };
-
-                MeshAttribute? FindAttribute(int usage) => primitive.Attributes.Any(x => x.Usage == usage) ? primitive.Attributes.First(x => x.Usage == usage) : null;
-
-                var positionsAttribute = FindAttribute(0) ?? throw new InvalidDataException($"Primitive in LOD {l} has no POSITION attribute.");
-
-                var buffer = new MeshPrimitiveBuffer
-                {
-                    Primitive = primitive,
-                    PositionBuffer = BindAttribute(positionsAttribute),
-                    NormalBuffer = BindAttribute(FindAttribute(1)),
-                    UVBuffer = BindAttribute(FindAttribute(2)),
-                    BoneMap = boneMaps.Count > 0 ? boneMaps[primitive.LODIndex] : []
-                };
-
-                foreach (var indicesAttribute in primitive.Attributes.Where(x => x.Usage == 5))
-                    buffer.BlendIndicesBuffers.Add(BindAttribute(indicesAttribute));
-                foreach (var weightsAttribute in primitive.Attributes.Where(x => x.Usage == 6))
-                    buffer.BlendWeightsBuffers.Add(BindAttribute(weightsAttribute));
-
-                var mesh = new Mesh
-                {
-                    Positions   = new DataBuffer<float>(primitive.VertexCount, 1, 3),
-                    Normals     = new DataBuffer<float>(primitive.VertexCount, 1, 3),
-                    UVLayers    = new DataBuffer<float>(primitive.VertexCount, 1, 2),
-                    FaceIndices = new DataBuffer<int>(primitive.FaceCount, 1, 1),
-                    Materials = [allMaterials[variants[0].MaterialIndices[primitive.MaterialIndex]]]
-                };
-
-                if (buffer.BlendIndicesBuffers.Count > 0)
-                {
-                    mesh.BoneWeights = new DataBuffer<float>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
-                    mesh.BoneIndices = new DataBuffer<int>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
-                }
-
-                faceReader.Position = primitive.FaceOffset * primitive.FaceIndexSize;
-
-                // We'll build a map, as the game usually passes 1 big buffer to the GPU for all submeshes,
-                // the problem being that these indices are global, we want local for intermediate formats
-                // TODO: Do a pass where we precache all vertices?
-                for (int i = 0; i < primitive.FaceCount; i++)
-                {
-                    var i0 = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
-                    var i1 = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
-                    var i2 = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
-
-                    var ri0 = vertexMap[i0];
-                    var ri1 = vertexMap[i1];
-                    var ri2 = vertexMap[i2];
-
-                    if (ri0 == 0)
-                    {
-                        ri0 = buffer.CreateVertexOnOutputMesh(i0, mesh);
-                        vertexMap[i0] = ri0;
-                    }
-                    if (ri1 == 0)
-                    {
-                        ri1 = buffer.CreateVertexOnOutputMesh(i1, mesh);
-                        vertexMap[i1] = ri1;
-                    }
-                    if (ri2 == 0)
-                    {
-                        ri2 = buffer.CreateVertexOnOutputMesh(i2, mesh);
-                        vertexMap[i2] = ri2;
-                    }
-
-                    ri0--;
-                    ri1--;
-                    ri2--;
-
-                    mesh.FaceIndices?.Add(ri0);
-                    mesh.FaceIndices?.Add(ri1);
-                    mesh.FaceIndices?.Add(ri2);
-                }
-
-                mesh.SetSkinBinding(skeletonBones);
-
-                variantGroups[0].AddNode(mesh);
-
-                for (int v = 1; v < variants.Count; v++)
-                {
-                    var variantMesh = new Mesh
-                    {
-                        Positions   = mesh.Positions,
-                        Normals     = mesh.Normals,
-                        UVLayers    = mesh.UVLayers,
-                        FaceIndices = mesh.FaceIndices,
-                        BoneIndices = mesh.BoneIndices,
-                        BoneWeights = mesh.BoneWeights,
-                        Materials = [allMaterials[variants[v].MaterialIndices[primitive.MaterialIndex]]]
-                    };
-
-                    variantMesh.SetSkinBinding(skeletonBones);
-                    variantGroups[v].AddNode(variantMesh);
-                }
-            }
-
-            break;
         }
 
         return new AssetReadResult
         {
             Asset = asset,
             Handler = this,
-            Data = scene
+            Data = scenes.ToArray()
         };
     }
 
-    /// <summary>Makes a variant name safe to use in an exported file name.</summary>
-    private static string SanitizeName(string name)
+    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap)
     {
-        var invalid = Path.GetInvalidFileNameChars();
-        return new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
+        var vertexMap = new int[primitive.VertexCount];
+        var positionsAttribute = FindAttribute(primitive, 0) ?? throw new InvalidDataException($"Primitive in LOD {primitive.LODIndex} has no POSITION attribute.");
+
+        var buffer = new MeshPrimitiveBuffer
+        {
+            Primitive = primitive,
+            PositionBuffer = BindAttribute(positionsAttribute, primitive, vertexBytes, positionOnlyVertexBytes),
+            NormalBuffer = BindAttribute(FindAttribute(primitive, 1), primitive, vertexBytes, positionOnlyVertexBytes),
+            UVBuffer = BindAttribute(FindAttribute(primitive, 2), primitive, vertexBytes, positionOnlyVertexBytes),
+            BoneMap = boneMap
+        };
+
+        foreach (var indicesAttribute in primitive.Attributes.Where(x => x.Usage == 5))
+            buffer.BlendIndicesBuffers.Add(BindAttribute(indicesAttribute, primitive, vertexBytes, positionOnlyVertexBytes));
+        foreach (var weightsAttribute in primitive.Attributes.Where(x => x.Usage == 6))
+            buffer.BlendWeightsBuffers.Add(BindAttribute(weightsAttribute, primitive, vertexBytes, positionOnlyVertexBytes));
+
+        var mesh = new Mesh
+        {
+            Positions   = new DataBuffer<float>(primitive.VertexCount, 1, 3),
+            Normals     = new DataBuffer<float>(primitive.VertexCount, 1, 3),
+            UVLayers    = new DataBuffer<float>(primitive.VertexCount, 1, 2),
+            FaceIndices = new DataBuffer<int>(primitive.FaceCount, 1, 1),
+        };
+
+        if (buffer.BlendIndicesBuffers.Count > 0)
+        {
+            mesh.BoneWeights = new DataBuffer<float>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
+            mesh.BoneIndices = new DataBuffer<int>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
+        }
+
+        var faceReader = new SpanReader(indexBytes) { Position = primitive.FaceOffset * primitive.FaceIndexSize };
+
+        // The game passes 1 big buffer to the GPU for all submeshes, so indices are global,
+        // we build a map to make them local to this mesh for intermediate formats.
+        for (int i = 0; i < primitive.FaceCount * 3; i++)
+        {
+            var index = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
+
+            if (vertexMap[index] == 0)
+                vertexMap[index] = buffer.CreateVertexOnOutputMesh(index, mesh);
+
+            mesh.FaceIndices.Add(vertexMap[index] - 1);
+        }
+
+        return mesh;
     }
 
-    /// <summary>
-    /// Maps every LOD to its buffer region and works out where its vertices start. Streamable LODs have a
-    /// region each; the coarsest LODs share the tail region, where each LOD's vertices follow the previous
-    /// (coarser) LOD's while its indices restart at 0.
-    /// </summary>
+    private static Scene CreateScene(string name, Mesh[] meshes, Material[] materials, SceneNode? skeletonRoot)
+    {
+        var scene = new Scene(name);
+        SkeletonBone[]? skinnedBones = null;
+
+        if (skeletonRoot is not null)
+        {
+            var skeleton = scene.AddNode(skeletonRoot.Clone());
+            var bones = skeletonRoot.EnumerateHierarchy<SkeletonBone>().Zip(skeleton.EnumerateHierarchy<SkeletonBone>()).ToDictionary();
+
+            skinnedBones = [.. skeletonRoot.GetAttribute<SkeletonBone[]>("OriginalTable").Select(bone => bones[bone])];
+            skeleton.SetAttribute("OriginalTable", skinnedBones);
+        }
+
+        var materialClones = new Dictionary<Material, Material>();
+
+        foreach (var material in materials.Distinct())
+            materialClones[material] = scene.AddNode((Material)material.Clone());
+
+        for (int i = 0; i < meshes.Length; i++)
+        {
+            var mesh = (Mesh)meshes[i].Clone();
+
+            mesh.Name = $"{name}_mesh{i}";
+            mesh.Materials = [materialClones[materials[i]]];
+            mesh.SetSkinBinding(skinnedBones);
+
+            scene.AddNode(mesh);
+        }
+
+        return scene;
+    }
+
+    private static MeshAttributeBuffer BindAttribute(MeshAttribute? attribute, MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes) => new()
+    {
+        Buffer = attribute?.PositionAttribute == true ? positionOnlyVertexBytes : vertexBytes,
+        ByteOffset = attribute?.PositionAttribute == true ? primitive.PositionOnlyVertexOffset : primitive.VertexOffset,
+        Attribute = attribute,
+        Stride = attribute?.PositionAttribute == true ? primitive.VertexPositionSize : primitive.VertexSize
+    };
+
+    private static MeshAttribute? FindAttribute(MeshPrimitive primitive, int usage) => primitive.Attributes.Where(x => x.Usage == usage).Cast<MeshAttribute?>().FirstOrDefault();
+
     private static MeshLod[] BuildLods(MeshMetadata meshMetadata, int lodCount, List<MeshPrimitive> primitives)
     {
         var lods = Enumerable.Range(0, lodCount).Select(i => new MeshLod(i, meshMetadata.GetLayoutForLod(i))).ToArray();

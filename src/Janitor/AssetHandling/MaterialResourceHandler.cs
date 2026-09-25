@@ -1,10 +1,10 @@
 ﻿using Janitor.Metadata;
 using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
+using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
 using RedFox.Graphics3D.Rendering.Materials;
 using RedFox.IO;
-using Silk.NET.Vulkan;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -31,18 +31,22 @@ public class MaterialResourceHandler : IAssetHandler
         return true;
     }
 
-    public static readonly string[] DefaultValue = new string[] { ".png" };
-
     /// <inheritdoc/>
     public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
-        var relativeImages = context.ExportConfiguration.GetOption("RelativeImages", false);
         var material = result.GetData<Material>();
         var manager = context.GetRequiredService<ImageTranslatorService>().Manager;
-        var fullPath = Path.Combine(context.ExportConfiguration.OutputDirectory, result.Asset.Name);
-        var imageFormats = context.ExportConfiguration.GetOption("ImageFormats", DefaultValue);
+        var materialDirectory = Path.Combine(context.OutputDirectory, result.Asset.Name);
+        var imageFormats = context.ExportConfiguration.GetOption("ImageFormats", TextureHandler.DefaultFormats);
+        var relativeImages = context.ExportConfiguration.GetOption("RelativeImages", false);
+        var skipExistingImages = context.ExportConfiguration.GetOption("SkipExistingImages", true);
 
-        TextureResourceHandler.ExportMaterialImages(material.EnumerateChildren<Texture>(), imageFormats, manager, fullPath, relativeImages, true);
+        foreach (var texture in material.EnumerateChildren<Texture>())
+        {
+            var texturePath = Path.Combine(materialDirectory, relativeImages ? Path.GetFileName(texture.Name) : texture.Name);
+
+            texture.FilePath = TextureHandler.ExportTexture(texture, imageFormats, manager, texturePath, skipExistingImages);
+        }
     }
 
     /// <inheritdoc/>
@@ -91,15 +95,9 @@ public class MaterialResourceHandler : IAssetHandler
                 if (textureFile.Data is not Asset textureAsset)
                     continue;
 
-                var textureResult = await context.AssetManager.ReadAsync(textureAsset, cancellationToken);
+                var textureResult = await context.ReadAsync(textureAsset, cancellationToken);
 
-                texture = new Texture(textureFile.FullPath)
-                {
-                    ImageLoader = Pack2FileImageLoader.Shared,
-                    UserData = textureFile
-                };
-
-                textureTable[i] = texture;
+                texture = textureResult.GetData<Texture>();
                 textureMap[textureResourceId] = texture;
                 material.AddNode(texture);
             }
