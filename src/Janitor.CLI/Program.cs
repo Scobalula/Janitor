@@ -1,4 +1,5 @@
 using Janitor.Factory;
+using Janitor.Wwise;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.Hashing;
 using RedFox.Graphics3D;
@@ -97,24 +98,61 @@ if (!nameTableManager.TryGetTable("BoneTable", out var boneTable))
     NameFile.Save("NameTables\\BoneTable.namefile", boneTable, NameFileFlags.Checksum);
 }
 
-// For now we just export .binfbx files to test the system, but eventually we will want to export all supported assets
-foreach (var file in vfs.EnumerateFiles(null, "*dancer*binfbx", SearchOption.AllDirectories))
+//// For now we just export .binfbx files to test the system, but eventually we will want to export all supported assets
+//foreach (var file in vfs.EnumerateFiles(null, "*dancer*binfbx", SearchOption.AllDirectories))
+//{
+//    if (file.Data is not Asset asset)
+//        continue;
+
+//    Console.WriteLine(asset.Name);
+//#if DEBUG
+//    file.CreateDirectory();
+//    file.WriteAllBytes();
+//#endif
+
+//    try
+//    {
+//        await assetManager.ExportAsync(asset, exportConfig);
+//    }
+//    catch
+//    {
+
+//    }
+//}
+
+// Media is only referenced by ID, so name it after the events that play it by tracing every mounted bank and cache the result for the next run.
+if (!nameTableManager.TryGetTable(WwiseMediaNameResolver.TableName, out var mediaTable))
+{
+    mediaTable = nameTableManager.CreateNameTable(WwiseMediaNameResolver.TableName);
+
+    var mediaNameResolver = new WwiseMediaNameResolver();
+
+    foreach (var file in vfs.EnumerateFiles(null, "*.bnk", SearchOption.AllDirectories))
+    {
+        if (file.Data is not Asset asset)
+            continue;
+
+        var data = await assetManager.ReadAsync(asset);
+
+        mediaNameResolver.AddBank(Path.GetFileNameWithoutExtension(asset.Name), data.GetData<WwiseBank>());
+    }
+
+    foreach (var (mediaId, mediaName) in mediaNameResolver.Resolve())
+    {
+        mediaTable.Add(mediaId, mediaName);
+    }
+
+    Directory.CreateDirectory("NameTables");
+    NameFile.Save("NameTables\\WwiseMediaTable.namefile", mediaTable, NameFileFlags.Checksum);
+}
+
+// Wwise media is exported as-is (.wem), banks are parsed and any embedded media is dumped from them
+foreach (var file in vfs.EnumerateFiles(null, "*", SearchOption.AllDirectories))
 {
     if (file.Data is not Asset asset)
         continue;
+    if (!asset.Name.EndsWith(".wem", StringComparison.OrdinalIgnoreCase) && !asset.Name.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase))
+        continue;
 
-    Console.WriteLine(asset.Name);
-#if DEBUG
-    file.CreateDirectory();
-    file.WriteAllBytes();
-#endif
-
-    try
-    {
-        await assetManager.ExportAsync(asset, exportConfig);
-    }
-    catch
-    {
-
-    }
+    await assetManager.ExportAsync(asset, exportConfig);
 }
