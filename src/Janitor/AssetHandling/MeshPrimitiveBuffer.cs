@@ -49,10 +49,10 @@ public class MeshPrimitiveBuffer
         outputMesh.Normals!.Add(v);
         outputMesh.UVLayers!.Add(new Vector2(uvX, uvY));
 
-        if (BlendIndicesBuffers.Count > 0)
+        if (outputMesh.Skin is { } skin)
         {
-            var blendIndices = outputMesh.BoneIndices!.Add();
-            var blendWeights = outputMesh.BoneWeights!.Add();
+            var blendIndices = skin.BoneIndices.Add();
+            var blendWeights = skin.BoneWeights.Add();
 
             for (int i = 0; i < BlendIndicesBuffers.Count; i++)
             {

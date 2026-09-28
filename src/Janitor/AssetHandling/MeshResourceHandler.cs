@@ -358,7 +358,8 @@ public class MeshResourceHandler : ModelHandler
             var positionOnlyVertexBytes = reader.ReadBytes(lod.Layout.PositionOnlyVertexByteCount);
             var indexBytes = reader.ReadBytes(lod.Layout.IndexByteCount);
             var boneMap = boneMaps.Count > 0 ? boneMaps[lod.Index] : [];
-            var meshes = lod.Primitives.Select(primitive => ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap)).ToArray();
+            var skinBones = skeletonRoot?.GetAttribute<SkeletonBone[]>("OriginalTable");
+            var meshes = lod.Primitives.Select(primitive => ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones)).ToArray();
 
             // Variants only swap materials, so every variant of a LOD shares the same geometry buffers.
             foreach (var variant in variants)
@@ -378,7 +379,7 @@ public class MeshResourceHandler : ModelHandler
         };
     }
 
-    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap)
+    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones)
     {
         var vertexMap = new int[primitive.VertexCount];
         var positionsAttribute = FindAttribute(primitive, 0) ?? throw new InvalidDataException($"Primitive in LOD {primitive.LODIndex} has no POSITION attribute.");
@@ -405,10 +406,10 @@ public class MeshResourceHandler : ModelHandler
             FaceIndices = new DataBuffer<int>(primitive.FaceCount, 1, 1),
         };
 
-        if (buffer.BlendIndicesBuffers.Count > 0)
+        if (buffer.BlendIndicesBuffers.Count > 0 && skinBones is not null)
         {
-            mesh.BoneWeights = new DataBuffer<float>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
-            mesh.BoneIndices = new DataBuffer<int>(primitive.VertexCount, buffer.BlendIndicesBuffers.Count * 4, 1);
+            var influenceCount = buffer.BlendIndicesBuffers.Count * 4;
+            mesh.Skin = new Skin(skinBones, new DataBuffer<int>(primitive.VertexCount, influenceCount, 1), new DataBuffer<float>(primitive.VertexCount, influenceCount, 1));
         }
 
         var faceReader = new SpanReader(indexBytes) { Position = primitive.FaceOffset * primitive.FaceIndexSize };
@@ -431,15 +432,14 @@ public class MeshResourceHandler : ModelHandler
     private static Scene CreateScene(string name, Mesh[] meshes, Material[] materials, SceneNode? skeletonRoot)
     {
         var scene = new Scene(name);
-        SkeletonBone[]? skinnedBones = null;
+        var bones = new Dictionary<SkeletonBone, SkeletonBone>();
 
         if (skeletonRoot is not null)
         {
             var skeleton = scene.AddNode(skeletonRoot.Clone());
-            var bones = skeletonRoot.EnumerateHierarchy<SkeletonBone>().Zip(skeleton.EnumerateHierarchy<SkeletonBone>()).ToDictionary();
+            bones = skeletonRoot.EnumerateHierarchy<SkeletonBone>().Zip(skeleton.EnumerateHierarchy<SkeletonBone>()).ToDictionary();
 
-            skinnedBones = [.. skeletonRoot.GetAttribute<SkeletonBone[]>("OriginalTable").Select(bone => bones[bone])];
-            skeleton.SetAttribute("OriginalTable", skinnedBones);
+            skeleton.SetAttribute("OriginalTable", skeletonRoot.GetAttribute<SkeletonBone[]>("OriginalTable").Select(bone => bones[bone]).ToArray());
         }
 
         var materialClones = new Dictionary<Material, Material>();
@@ -453,7 +453,7 @@ public class MeshResourceHandler : ModelHandler
 
             mesh.Name = $"{name}_mesh{i}";
             mesh.Materials = [materialClones[materials[i]]];
-            mesh.SetSkinBinding(skinnedBones);
+            mesh.Skin?.RemapBones(bones);
 
             scene.AddNode(mesh);
         }

@@ -1,6 +1,3 @@
-
-
-using Avalonia.Data;
 using Janitor.Factory;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.Hashing;
@@ -25,11 +22,13 @@ var exportConfig = new ExportConfiguration()
 
 var imageFormats = new string[] { ".dds" };
 var modelFormats = new string[] { ".semodel", ".cast", ".fbx" };
+var animationFormats = new string[] { ".seanim", ".cast" };
 
 exportConfig.SetOption("RelativeImages", false);
 exportConfig.SetOption("SkipExistingImages", true);
 exportConfig.SetOption("ModelFormats", modelFormats);
 exportConfig.SetOption("ImageFormats", imageFormats);
+exportConfig.SetOption("AnimationFormats", animationFormats);
 
 var assetManager = JanitorAssetManagerFactory.Create();
 
@@ -73,35 +72,33 @@ foreach (var arg in args)
 
 var vfs = assetManager.GetRequiredService<AssetFileSystemService>().FileSystem;
 
-//#if DEBUG
-//var nameTableManager = assetManager.GetRequiredService<NameListService>().Manager;
+var nameTableManager = assetManager.GetRequiredService<NameListService>().Manager;
 
-//if (!nameTableManager.TryGetTable("BoneTable", out var boneTable))
-//{
-//    boneTable = nameTableManager.CreateNameTable("BoneTable");
-//}
+// Clips only reference bones by hash, so build the bone table from the skeletons once and cache it for the next run.
+if (!nameTableManager.TryGetTable("BoneTable", out var boneTable))
+{
+    boneTable = nameTableManager.CreateNameTable("BoneTable");
 
-//// Build Skeleton Hash Table
-//foreach (var file in vfs.EnumerateFiles(null, "*.binskeleton", SearchOption.AllDirectories))
-//{
-//    if (file.Data is not Asset asset)
-//        continue;
+    foreach (var file in vfs.EnumerateFiles(null, "*.binskeleton", SearchOption.AllDirectories))
+    {
+        if (file.Data is not Asset asset)
+            continue;
 
-//    var data = await assetManager.ReadAsync(asset);
-//    var node = data.GetData<SceneNode>();
+        var data = await assetManager.ReadAsync(asset);
+        var node = data.GetData<SceneNode>();
 
-//    foreach (var child in node.EnumerateDescendants<SkeletonBone>())
-//    {
-//        boneTable.Add((ulong)child.UserId, child.Name);
-//    }
-//}
+        foreach (var child in node.EnumerateDescendants<SkeletonBone>())
+        {
+            boneTable.Add((ulong)child.UserId, child.Name);
+        }
+    }
 
-//Directory.CreateDirectory("NameTables");
-//NameFile.Save("NameTables\\BoneTable.namefile", boneTable, NameFileFlags.Checksum);
-//#endif
+    Directory.CreateDirectory("NameTables");
+    NameFile.Save("NameTables\\BoneTable.namefile", boneTable, NameFileFlags.Checksum);
+}
 
 // For now we just export .binfbx files to test the system, but eventually we will want to export all supported assets
-foreach (var file in vfs.EnumerateFiles(null, "*dancer*binanimclip", SearchOption.AllDirectories))
+foreach (var file in vfs.EnumerateFiles(null, "*dancer*binfbx", SearchOption.AllDirectories))
 {
     if (file.Data is not Asset asset)
         continue;
@@ -112,12 +109,12 @@ foreach (var file in vfs.EnumerateFiles(null, "*dancer*binanimclip", SearchOptio
     file.WriteAllBytes();
 #endif
 
-    //try
-    //{
-    //    await assetManager.ExportAsync(asset, exportConfig);
-    //}
-    //catch
-    //{
+    try
+    {
+        await assetManager.ExportAsync(asset, exportConfig);
+    }
+    catch
+    {
 
-    //}
+    }
 }

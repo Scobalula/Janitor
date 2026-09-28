@@ -1,17 +1,4 @@
 <Solution>
-  <Folder Name="/RedFox/">
-    <Project Path="../../RedFox/src/cs/RedFox.Compression.Deflate/RedFox.Compression.Deflate.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Compression.ZStandard/RedFox.Compression.ZStandard.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Compression/RedFox.Compression.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.GameExtraction.Hashing/RedFox.GameExtraction.Hashing.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.GameExtraction.UI/RedFox.GameExtraction.UI.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.GameExtraction/RedFox.GameExtraction.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.Formats/RedFox.Graphics3D.Formats.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D.OpenGL/RedFox.Graphics3D.OpenGL.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.Graphics3D/RedFox.Graphics3D.csproj" />
-    <Project Path="../../RedFox/src/cs/RedFox.IO/RedFox.IO.csproj" />
-  </Folder>
-  <Project Path="../../RedFox/src/cs/RedFox.Imaging/RedFox.Imaging.csproj" />
   <Project Path="Janitor.CLI/Janitor.CLI.csproj" />
   <Project Path="Janitor.Factory/Janitor.Factory.csproj" Id="cbb9517c-630f-47e7-83db-31e4488d4e25" />
   <Project Path="Janitor/Janitor.csproj" />

@@ -28,11 +28,12 @@ public static class JanitorAssetManagerFactory
         manager.RegisterHandler(new MaterialResourceHandler());
         manager.RegisterHandler(new TextureResourceHandler());
         manager.RegisterHandler(new SkeletonResourceHandler());
+        manager.RegisterHandler(new ClipResourceHandler());
 
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();
         manager.RegisterService<ResourceTableService>();
-        //manager.RegisterService(NameListService.CreateFromDirectory("NameTables"));
+        manager.RegisterService(NameListService.CreateFromDirectory("NameTables"));
 
         return manager;
     }
