@@ -1,4 +1,5 @@
 using Janitor.Metadata;
+using Janitor.Wwise;
 using RedFox.Compression;
 using RedFox.Compression.LZ4;
 using RedFox.GameExtraction;
@@ -136,10 +137,16 @@ public sealed class Pack2SourceReader : IAssetSourceReader
                 toc.Directories.Add(new(name));
             }
 
+            var nameList = assetManager.GetRequiredService<NameListService>();
+
             for (int i = 0; i < fileEntries.Length; i++)
             {
                 var fileEntry = fileEntries[i];
                 var name = stringReader.ReadString(fileEntry.NameOffset, fileEntry.NameLength);
+
+                if (Path.GetExtension(name) == ".wem" && uint.TryParse(Path.GetFileNameWithoutExtension(name), out var mediaId) && nameList.Manager.TryGetValue(WwiseMediaNameResolver.TableName, mediaId, out var mediaName))
+                    name = $"{mediaName}_{mediaId}.wem";
+
                 var metaData = packFileMetaDataBuffer.Slice(fileEntry.MetaDataOffset, fileEntry.MetaDataSize);
                 var bufInfo = fileBufferInfoBuffer.Slice(fileEntry.BufferInfoOffset, fileEntry.BufferInfoSize);
 

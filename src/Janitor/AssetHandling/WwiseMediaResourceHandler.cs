@@ -1,13 +1,10 @@
 using Janitor.Pack2FileSystem;
-using Janitor.Wwise;
 using RedFox.GameExtraction;
 
 namespace Janitor.AssetHandling;
 
 /// <summary>
 /// Handles Wwise media (.wem) assets stored in Pack2 files, which are exported byte-for-byte without conversion.
-/// Media that is only known by its identifier is prefixed with the name of the event that plays it when the
-/// <see cref="WwiseMediaNameResolver.TableName"/> name table is available.
 /// </summary>
 public class WwiseMediaResourceHandler : IAssetHandler
 {
@@ -46,28 +43,16 @@ public class WwiseMediaResourceHandler : IAssetHandler
         if (asset.DataSource is Pack2File { Size: 0 })
             return Task.FromResult(false);
 
-        return Task.FromResult(context.ExportConfiguration.Overwrite || !File.Exists(ResolveOutputPath(asset, context)));
+        return Task.FromResult(context.ExportConfiguration.Overwrite || !File.Exists(context.ResolveAssetPath(asset)));
     }
 
     /// <inheritdoc/>
     public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
-        var outputPath = ResolveOutputPath(result.Asset, context);
+        var outputPath = context.ResolveAssetPath(result.Asset);
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         await File.WriteAllBytesAsync(outputPath, result.GetData<byte[]>(), cancellationToken);
-    }
-
-    private static string ResolveOutputPath(Asset asset, AssetExportContext context)
-    {
-        var outputPath = context.ResolveAssetPath(asset);
-
-        if (!uint.TryParse(Path.GetFileNameWithoutExtension(asset.Name), out var mediaId))
-            return outputPath;
-        if (!context.GetRequiredService<NameListService>().Manager.TryGetValue(WwiseMediaNameResolver.TableName, mediaId, out var name))
-            return outputPath;
-
-        return Path.Combine(Path.GetDirectoryName(outputPath)!, $"{name}_{mediaId}.wem");
     }
 }

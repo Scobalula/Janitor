@@ -144,6 +144,10 @@ if (!nameTableManager.TryGetTable(WwiseMediaNameResolver.TableName, out var medi
 
     Directory.CreateDirectory("NameTables");
     NameFile.Save("NameTables\\WwiseMediaTable.namefile", mediaTable, NameFileFlags.Checksum);
+
+    Console.WriteLine("Built the Wwise media name table, run again so media is mounted with its names.");
+
+    return;
 }
 
 // Wwise media is exported as-is (.wem), banks are parsed and any embedded media is dumped from them
