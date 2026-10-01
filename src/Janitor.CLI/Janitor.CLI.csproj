@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="RedFox.GameExtraction.CommandLine" Version="2026.10.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Janitor.Factory\Janitor.Factory.csproj" />
     <ProjectReference Include="..\Janitor\Janitor.csproj" />
   </ItemGroup>

@@ -5,13 +5,18 @@ using RedFox.GameExtraction;
 namespace Janitor.Factory;
 
 /// <summary>
-/// Creates preconfigured <see cref="AssetManager"/> instances for ZIP-backed template applications.
+/// Creates preconfigured <see cref="AssetManager"/> instances for Northlight Engine sources.
 /// </summary>
 public static class JanitorAssetManagerFactory
 {
     /// <summary>
-    /// Creates an <see cref="AssetManager"/> configured with ZIP mounting, raw export support,
-    /// and a shared virtual file system service.
+    /// The directory name tables are loaded from and saved to.
+    /// </summary>
+    public const string NameTablesDirectory = "NameTables";
+
+    /// <summary>
+    /// Creates an <see cref="AssetManager"/> configured with Pack2 mounting, the Northlight asset handlers,
+    /// and the name tables found in <see cref="NameTablesDirectory"/>.
     /// </summary>
     /// <returns>A configured asset manager.</returns>
     public static AssetManager Create()
@@ -19,34 +24,21 @@ public static class JanitorAssetManagerFactory
         AssetManager manager = new();
         manager.RegisterService(new AssetFileSystemService(manager));
 
-        manager.AssetReadStarting += Manager_AssetReadStarting;
-        manager.AssetReadCompleted += Manager_AssetReadCompleted;
-
         manager.RegisterSourceReader(new Pack2SourceReader());
         manager.RegisterHandler(new RawAssetHandler());
         manager.RegisterHandler(new MeshResourceHandler());
         manager.RegisterHandler(new MaterialResourceHandler());
         manager.RegisterHandler(new TextureResourceHandler());
         manager.RegisterHandler(new SkeletonResourceHandler());
-        manager.RegisterHandler(new ClipResourceHandler());
+        //manager.RegisterHandler(new ClipResourceHandler());
         manager.RegisterHandler(new WwiseMediaResourceHandler());
         manager.RegisterHandler(new WwiseBankResourceHandler());
 
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();
         manager.RegisterService<ResourceTableService>();
-        manager.RegisterService(NameListService.CreateFromDirectory("NameTables"));
+        manager.RegisterService(NameListService.CreateFromDirectory(NameTablesDirectory));
 
         return manager;
-    }
-
-    private static void Manager_AssetReadCompleted(object? sender, AssetReadCompletedEventArgs e)
-    {
-        Console.WriteLine($"Asset read completed for asset: {Path.GetFileName(e.Asset.Name)}");
-    }
-
-    private static void Manager_AssetReadStarting(object? sender, AssetReadEventArgs e)
-    {
-        Console.WriteLine($"Beginning asset read for asset: {Path.GetFileName(e.Asset.Name)}");
     }
 }

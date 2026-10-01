@@ -4,19 +4,29 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RedFox.Compression.LZ4" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.GameExtraction" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.GameExtraction.Hashing" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Graphics3D" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Graphics3D.Formats" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Imaging" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Imaging.Formats" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Imaging.Vulkan" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.IO" Version="2026.9.27.2" />
-    <PackageReference Include="RedFox.Patterns" Version="2026.9.27.2" />
+    <EmbeddedResource Include="Wwise\packed_codebooks.bin" LogicalName="Janitor.Wwise.packed_codebooks.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Native\opus.dll" Link="Native\opus.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Native\vorbis.dll" Link="Native\vorbis.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RedFox.Compression.LZ4" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.GameExtraction" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.GameExtraction.Hashing" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Graphics3D" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Graphics3D.Formats" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Imaging" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Imaging.Formats" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Imaging.Vulkan" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.IO" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Patterns" Version="2026.10.1.1" />
   </ItemGroup>
 
 </Project>

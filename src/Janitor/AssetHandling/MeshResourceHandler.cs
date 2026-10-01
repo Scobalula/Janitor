@@ -107,7 +107,7 @@ public class MeshResourceHandler : ModelHandler
             hasGeometryTransformShader = geometryTransformShaderId is not (0 or 1 or ulong.MaxValue);
         }
 
-        var boneMaps = new List<List<int>>(lodCount);
+        var boneMap = new List<int>();
 
         if (skeletonLodCount > 0)
         {
@@ -128,21 +128,23 @@ public class MeshResourceHandler : ModelHandler
                 reader.BaseStream.Position += 4 * count0;
             }
 
-
+            // Per-LOD bone palettes; vertex blend indices reference the finest LOD's palette across every LOD.
             for (int i = 0; i < lodCount; i++)
             {
-                var unk = reader.ReadInt32();
-                var boneMap = new List<int>(lodCount);
+                var paletteCount = reader.ReadInt32();
 
-                for (int j = 0; j < unk; j++)
+                if (i == 0)
                 {
-                    boneMap.Add(reader.ReadInt32());
+                    for (int j = 0; j < paletteCount; j++)
+                        boneMap.Add(reader.ReadInt32());
+                }
+                else
+                {
+                    reader.BaseStream.Position += paletteCount * 4;
                 }
 
-                var unk2 = reader.ReadInt32();
-                reader.BaseStream.Position += unk2 * 4;
-
-                boneMaps.Add(boneMap);
+                var inverseCount = reader.ReadInt32();
+                reader.BaseStream.Position += inverseCount * 4;
             }
 
             var someSize = reader.ReadInt32();
@@ -357,7 +359,6 @@ public class MeshResourceHandler : ModelHandler
             var vertexBytes = reader.ReadBytes(lod.Layout.VertexByteCount);
             var positionOnlyVertexBytes = reader.ReadBytes(lod.Layout.PositionOnlyVertexByteCount);
             var indexBytes = reader.ReadBytes(lod.Layout.IndexByteCount);
-            var boneMap = boneMaps.Count > 0 ? boneMaps[lod.Index] : [];
             var skinBones = skeletonRoot?.GetAttribute<SkeletonBone[]>("OriginalTable");
             var meshes = lod.Primitives.Select(primitive => ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones)).ToArray();
 

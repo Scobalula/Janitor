@@ -84,15 +84,7 @@ public class SkeletonResourceHandler : IAssetHandler
 
         reader.BaseStream.Position = parentIndicesOffset;
 
-        for (var i = 0; i < boneCount; i++)
-        {
-            var parentIndex = reader.ReadInt16();
-
-            if (parentIndex >= 0 && parentIndex < bones.Length)
-                bones[i].MoveTo(bones[parentIndex], ReparentTransformMode.PreserveLocal);
-            else
-                bones[i].MoveTo(skeletonGroup, ReparentTransformMode.PreserveLocal);
-        }
+        skeletonGroup.LinkHierarchyUnsafe(bones, reader.ReadStructArray<short>(boneCount));
 
         reader.BaseStream.Position = boneInfoOffset;
 

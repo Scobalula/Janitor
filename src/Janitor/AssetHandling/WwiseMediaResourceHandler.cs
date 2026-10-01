@@ -1,13 +1,20 @@
 using Janitor.Pack2FileSystem;
+using Janitor.Wwise;
 using RedFox.GameExtraction;
 
 namespace Janitor.AssetHandling;
 
 /// <summary>
-/// Handles Wwise media (.wem) assets stored in Pack2 files, which are exported byte-for-byte without conversion.
+/// Handles Wwise media (.wem) assets stored in Pack2 files, which are exported byte-for-byte unless the
+/// <see cref="ConvertAudioOption"/> export option is set, in which case supported codecs are exported as PCM wave files.
 /// </summary>
 public class WwiseMediaResourceHandler : IAssetHandler
 {
+    /// <summary>
+    /// The name of the boolean export option that converts media to wave files, which is off when not set.
+    /// </summary>
+    public const string ConvertAudioOption = "ConvertAudio";
+
     /// <inheritdoc/>
     public bool CanHandle(Asset asset)
     {
@@ -43,16 +50,25 @@ public class WwiseMediaResourceHandler : IAssetHandler
         if (asset.DataSource is Pack2File { Size: 0 })
             return Task.FromResult(false);
 
-        return Task.FromResult(context.ExportConfiguration.Overwrite || !File.Exists(context.ResolveAssetPath(asset)));
+        var exists = File.Exists(context.ResolveAssetPath(asset)) || File.Exists(context.ResolveAssetPath(asset, WwiseMediaConverter.OutputExtension));
+
+        return Task.FromResult(context.ExportConfiguration.Overwrite || !exists);
     }
 
     /// <inheritdoc/>
     public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
+        var media = result.GetData<byte[]>();
         var outputPath = context.ResolveAssetPath(result.Asset);
+
+        if (context.ExportConfiguration.GetOption(ConvertAudioOption, true) && WwiseMediaConverter.TryConvert(media, out var wave))
+        {
+            media = wave;
+            outputPath = context.ResolveAssetPath(result.Asset, WwiseMediaConverter.OutputExtension);
+        }
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
-        await File.WriteAllBytesAsync(outputPath, result.GetData<byte[]>(), cancellationToken);
+        await File.WriteAllBytesAsync(outputPath, media, cancellationToken);
     }
 }
