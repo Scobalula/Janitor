@@ -17,16 +17,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="RedFox.Compression.LZ4" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.GameExtraction" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.GameExtraction.Hashing" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Graphics3D" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Graphics3D.Formats" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Imaging" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Imaging.Formats" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Imaging.Vulkan" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.IO" Version="2026.10.1.1" />
-    <PackageReference Include="RedFox.Patterns" Version="2026.10.1.1" />
+    <PackageReference Include="RedFox.Compression.LZ4" />
+    <PackageReference Include="RedFox.GameExtraction" />
+    <PackageReference Include="RedFox.GameExtraction.Hashing" />
+    <PackageReference Include="RedFox.Graphics3D" />
+    <PackageReference Include="RedFox.Graphics3D.Formats" />
+    <PackageReference Include="RedFox.Imaging" />
+    <PackageReference Include="RedFox.Imaging.Formats" />
+    <PackageReference Include="RedFox.Imaging.Vulkan" />
+    <PackageReference Include="RedFox.IO" />
+    <PackageReference Include="RedFox.Patterns" />
   </ItemGroup>
 
 </Project>

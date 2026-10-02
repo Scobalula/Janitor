@@ -1,19 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RedFox.GameExtraction.CommandLine" />
+    <PackageReference Include="RedFox.GameExtraction.UI" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Janitor.Factory\Janitor.Factory.csproj" />
-    <ProjectReference Include="..\Janitor\Janitor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\assets\Icon.png" Link="Icon.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

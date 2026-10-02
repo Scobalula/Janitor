@@ -25,14 +25,14 @@ public static class JanitorAssetManagerFactory
         manager.RegisterService(new AssetFileSystemService(manager));
 
         manager.RegisterSourceReader(new Pack2SourceReader());
-        manager.RegisterHandler(new RawAssetHandler());
         manager.RegisterHandler(new MeshResourceHandler());
         manager.RegisterHandler(new MaterialResourceHandler());
         manager.RegisterHandler(new TextureResourceHandler());
         manager.RegisterHandler(new SkeletonResourceHandler());
-        //manager.RegisterHandler(new ClipResourceHandler());
+        manager.RegisterHandler(new ClipResourceHandler());
         manager.RegisterHandler(new WwiseMediaResourceHandler());
         manager.RegisterHandler(new WwiseBankResourceHandler());
+        manager.RegisterHandler(new RawAssetHandler());
 
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();

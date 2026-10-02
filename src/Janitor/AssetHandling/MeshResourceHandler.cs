@@ -40,7 +40,8 @@ public class MeshResourceHandler : ModelHandler
         if (!file.TryParseMetadata<MeshMetadata>("rend::MeshMetadata", out var meshMetadata))
             throw new InvalidDataException($"Missing rend::MeshMetadata on '{file.FullPath}'.");
 
-        using var reader = new BinaryReader(file.Open());
+        using var reader = new BinaryReader(new MemoryStream(file.ReadAllBytes(cancellationToken)));
+        cancellationToken.ThrowIfCancellationRequested();
 
         var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
         var modelName = Path.GetFileNameWithoutExtension(asset.Name);
@@ -179,31 +180,12 @@ public class MeshResourceHandler : ModelHandler
             reader.BaseStream.Position += 40;
 
         var materialCount = reader.ReadInt32();
-        var uniqueMaterials = new Dictionary<ulong, Material>();
-        var allMaterials = new Material[materialCount];
+        var materialResourceIds = new ulong[materialCount];
 
         for (var materialIndex = 0; materialIndex < materialCount; materialIndex++)
         {
-            var materialResourceId = reader.ReadUInt64();
-
-            if (!uniqueMaterials.TryGetValue(materialResourceId, out var material))
-            {
-                if (!resourceTable.TryGetValue(materialResourceId, out var materialResourceFile))
-                    throw new KeyNotFoundException($"Material resource with ID 0x{materialResourceId:X16} not found in resource table.");
-                if (materialResourceFile.Data is not Asset materialAsset)
-                    throw new InvalidDataException($"Material resource with ID 0x{materialResourceId:X16} does not have an associated Asset.");
-
-                var materialResult = await context.ReadAsync(materialAsset, cancellationToken);
-
-                material = materialResult.GetData<Material>();
-
-                if (uniqueMaterials.Values.Any(x => x.Name.Equals(material.Name, StringComparison.OrdinalIgnoreCase)))
-                    material.Name = $"{material.Name}_{materialResourceId:X16}";
-
-                uniqueMaterials[materialResourceId] = material;
-            }
-
-            allMaterials[materialIndex] = material;
+            cancellationToken.ThrowIfCancellationRequested();
+            materialResourceIds[materialIndex] = reader.ReadUInt64();
         }
 
         var materialIndexCount = reader.ReadInt32();
@@ -218,6 +200,7 @@ public class MeshResourceHandler : ModelHandler
 
         for (int i = 0; i < variantCount; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             variants.Add(new MeshVariant()
             {
                 Name = Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32())).TrimEnd('\0'),
@@ -239,6 +222,7 @@ public class MeshResourceHandler : ModelHandler
 
         for (int i = 0; i < primitiveCount; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var partOffset = reader.BaseStream.Position;
 
             var lodID = reader.ReadInt32();
@@ -265,6 +249,7 @@ public class MeshResourceHandler : ModelHandler
 
             for (int m = 0; m < attributeCount; m++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var positionAttribute = reader.ReadByte() == 0;
                 var dataType = reader.ReadByte();
                 var usage = reader.ReadByte();
@@ -350,23 +335,79 @@ public class MeshResourceHandler : ModelHandler
             throw new InvalidDataException($"Mesh header of '{file.FullPath}' ended at 0x{reader.BaseStream.Position:X}, metadata says 0x{meshMetadata.CpuNumBytes:X}.");
 
         var lods = BuildLods(meshMetadata, lodCount, primitives);
-        var scenes = new List<Scene>(lodCount * variants.Count);
+        MeshLod[] nonEmptyLods = lods.Where(lod => lod.Primitives.Count > 0).ToArray();
+        MeshLod[] lodsToRead = nonEmptyLods;
+        MeshVariant[] variantsToRead = variants.ToArray();
 
-        foreach (var lod in lods.Where(lod => lod.Primitives.Count > 0))
+        // Resolve only the materials that the output scenes will use. This keeps preview-only reads from loading
+        // every material resource before knowing which output scenes use each material.
+        bool[] usedMaterialIndices = new bool[materialCount];
+        foreach (MeshLod lod in lodsToRead)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (MeshPrimitive primitive in lod.Primitives)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                foreach (MeshVariant variant in variantsToRead)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    usedMaterialIndices[variant.MaterialIndices[primitive.MaterialIndex]] = true;
+                }
+            }
+        }
+
+        var uniqueMaterials = new Dictionary<ulong, Material>();
+        var allMaterials = new Material?[materialCount];
+        for (int materialIndex = 0; materialIndex < usedMaterialIndices.Length; materialIndex++)
+        {
+            if (!usedMaterialIndices[materialIndex])
+                continue;
+
+            cancellationToken.ThrowIfCancellationRequested();
+            ulong materialResourceId = materialResourceIds[materialIndex];
+
+            if (!uniqueMaterials.TryGetValue(materialResourceId, out Material? material))
+            {
+                if (!resourceTable.TryGetValue(materialResourceId, out var materialResourceFile))
+                    throw new KeyNotFoundException($"Material resource with ID 0x{materialResourceId:X16} not found in resource table.");
+                if (materialResourceFile.Data is not Asset materialAsset)
+                    throw new InvalidDataException($"Material resource with ID 0x{materialResourceId:X16} does not have an associated Asset.");
+
+                var materialResult = await context.ReadAsync(materialAsset, cancellationToken);
+                material = materialResult.GetData<Material>();
+
+                if (uniqueMaterials.Values.Any(x => x.Name.Equals(material.Name, StringComparison.OrdinalIgnoreCase)))
+                    material.Name = $"{material.Name}_{materialResourceId:X16}";
+
+                uniqueMaterials[materialResourceId] = material;
+            }
+
+            allMaterials[materialIndex] = material;
+        }
+
+        var scenes = new List<Scene>(lodsToRead.Length * variantsToRead.Length);
+
+        foreach (var lod in lodsToRead)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             reader.BaseStream.Position = lod.Layout.FileOffset;
 
             var vertexBytes = reader.ReadBytes(lod.Layout.VertexByteCount);
             var positionOnlyVertexBytes = reader.ReadBytes(lod.Layout.PositionOnlyVertexByteCount);
             var indexBytes = reader.ReadBytes(lod.Layout.IndexByteCount);
             var skinBones = skeletonRoot?.GetAttribute<SkeletonBone[]>("OriginalTable");
-            var meshes = lod.Primitives.Select(primitive => ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones)).ToArray();
+            var meshes = lod.Primitives.Select(primitive =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones, cancellationToken);
+            }).ToArray();
 
             // Variants only swap materials, so every variant of a LOD shares the same geometry buffers.
-            foreach (var variant in variants)
+            foreach (var variant in variantsToRead)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var sceneName = $"{modelName}_{string.Join('_', variant.Name.Split(Path.GetInvalidFileNameChars()))}_lod{lod.Index}";
-                var materials = lod.Primitives.Select(primitive => allMaterials[variant.MaterialIndices[primitive.MaterialIndex]]).ToArray();
+                var materials = lod.Primitives.Select(primitive => allMaterials[variant.MaterialIndices[primitive.MaterialIndex]]!).ToArray();
 
                 scenes.Add(CreateScene(sceneName, meshes, materials, skeletonRoot));
             }
@@ -380,7 +421,7 @@ public class MeshResourceHandler : ModelHandler
         };
     }
 
-    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones)
+    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones, CancellationToken cancellationToken)
     {
         var vertexMap = new int[primitive.VertexCount];
         var positionsAttribute = FindAttribute(primitive, 0) ?? throw new InvalidDataException($"Primitive in LOD {primitive.LODIndex} has no POSITION attribute.");
@@ -419,6 +460,9 @@ public class MeshResourceHandler : ModelHandler
         // we build a map to make them local to this mesh for intermediate formats.
         for (int i = 0; i < primitive.FaceCount * 3; i++)
         {
+            if ((i & 0x3FFF) == 0)
+                cancellationToken.ThrowIfCancellationRequested();
+
             var index = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
 
             if (vertexMap[index] == 0)

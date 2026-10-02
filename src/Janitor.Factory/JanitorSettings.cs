@@ -16,7 +16,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "OutputDirectory",
-            Group = "Export",
+            Group = GameExtractionSettingGroup.Export,
             Label = "Output directory",
             Type = GameExtractionSettingType.DirectoryPath,
             DefaultValue = GameExtractionSettings.GetDefaultOutputDirectory(),
@@ -24,7 +24,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "Overwrite",
-            Group = "Export",
+            Group = GameExtractionSettingGroup.Export,
             Label = "Overwrite existing files",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = false,
@@ -32,7 +32,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "PreserveDirectoryStructure",
-            Group = "Export",
+            Group = GameExtractionSettingGroup.Export,
             Label = "Preserve directory structure",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = true,
@@ -40,7 +40,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "ExportReferences",
-            Group = "Export",
+            Group = GameExtractionSettingGroup.Export,
             Label = "Export referenced assets",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = false,
@@ -48,7 +48,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "ImageFormat",
-            Group = "Images",
+            Group = GameExtractionSettingGroup.Image,
             Label = "Image format",
             Type = GameExtractionSettingType.Choice,
             Options = [".dds", ".png", ".tga"],
@@ -57,7 +57,7 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "SkipExistingImages",
-            Group = "Images",
+            Group = GameExtractionSettingGroup.Image,
             Label = "Skip images that already exist",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = true,
@@ -65,24 +65,49 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = "RelativeImages",
-            Group = "Images",
+            Group = GameExtractionSettingGroup.Image,
             Label = "Export material images next to models",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = false,
+        },
+        // Model Settings
+        new GameExtractionSetting
+        {
+            Name = "ModelFormats",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Model formats",
+            Description = "List of export extensions/formats.",
+            Type = GameExtractionSettingType.Text,
+            DefaultValue = ".cast .semodel",
+        },
+        new GameExtractionSetting
+        {
+            Name = "ExportModelImages",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Export images with models.",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
+        },
+        new GameExtractionSetting
+        {
+            Name = "ExportLocalModelImages",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Export images to the model's folder.",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = false,
         },
         new GameExtractionSetting
         {
-            Name = "ModelFormats",
-            Group = "Models",
-            Label = "Model formats",
-            Description = "Comma separated list of model file extensions.",
-            Type = GameExtractionSettingType.Text,
-            DefaultValue = ".semodel, .cast, .fbx",
+            Name = "SkipExistingModels",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Skip already exported models.",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
         },
         new GameExtractionSetting
         {
             Name = "AnimationFormats",
-            Group = "Animations",
+            Group = GameExtractionSettingGroup.Animation,
             Label = "Animation formats",
             Description = "Comma separated list of animation file extensions.",
             Type = GameExtractionSettingType.Text,
@@ -91,8 +116,8 @@ public static class JanitorSettings
         new GameExtractionSetting
         {
             Name = WwiseMediaResourceHandler.ConvertAudioOption,
-            Group = "Audio",
-            Label = "Convert audio to WAV",
+            Group = GameExtractionSettingGroup.Sound,
+            Label = "Convert Wwise Audio to Wav.",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = true,
         },

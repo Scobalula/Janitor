@@ -33,22 +33,34 @@ public class Pack2File(Pack2Source owner, string name, long size, byte[] metaDat
 
     public byte[] ReadAllBytes()
     {
-        var finalBuffer = new byte[(int)Size];
-        var compressedBuffer = new byte[(int)Size];
+        return ReadAllBytes(CancellationToken.None);
+    }
+
+    public byte[] ReadAllBytes(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var finalBuffer = new byte[checked((int)Size)];
+        var maxCompressedSize = 0;
+        for (int c = 0; c < BufferInfo.Length;)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            c += Pack2SourceReader.UnpackBufferInfo(BufferInfo[c..].Span, out _, out _, out int compressedSize, out _, out _);
+            maxCompressedSize = Math.Max(maxCompressedSize, compressedSize);
+        }
+
+        var compressedBuffer = GC.AllocateUninitializedArray<byte>(maxCompressedSize);
         var consumed = 0;
 
         var finalBufferSpan = finalBuffer.AsSpan();
 
         for (int c = 0; c < BufferInfo.Length;)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             c += Pack2SourceReader.UnpackBufferInfo(BufferInfo[c..].Span, out int blobIndex, out var offset, out var compressedSize, out var decompressedSize, out var codec);
-
-            if (compressedSize > compressedBuffer.Length)
-                compressedBuffer = new byte[compressedSize];
 
             var localCompressedBuffer = compressedBuffer.AsSpan()[..compressedSize];
 
-            Owner.References[blobIndex].Read(offset, localCompressedBuffer[..]);
+            Owner.References[blobIndex].Read(offset, localCompressedBuffer[..], cancellationToken);
 
             codec.Decompress(localCompressedBuffer[..compressedSize], finalBufferSpan.Slice(consumed, decompressedSize));
 
@@ -56,6 +68,7 @@ public class Pack2File(Pack2Source owner, string name, long size, byte[] metaDat
             consumed += decompressedSize;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return finalBuffer;
     }
 

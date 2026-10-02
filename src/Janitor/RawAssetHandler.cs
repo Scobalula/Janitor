@@ -16,8 +16,7 @@ public sealed class RawAssetHandler : IAssetHandler
     /// <returns>Always <see langword="true"/> for this template handler.</returns>
     public bool CanHandle(Asset asset)
     {
-        ArgumentNullException.ThrowIfNull(asset);
-        return false;
+        return true;
     }
 
     /// <summary>

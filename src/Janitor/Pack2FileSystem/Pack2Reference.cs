@@ -15,7 +15,9 @@ namespace Janitor.Pack2FileSystem;
 /// <param name="path"></param>
 public class Pack2Reference(string path) : IDisposable
 {
+    private readonly object _sync = new();
     private Stream? _stream;
+    private bool _disposed;
 
     /// <summary>
     /// Gets the path of the source file.
@@ -24,15 +26,36 @@ public class Pack2Reference(string path) : IDisposable
 
     public void Read(long offset, Span<byte> buffer)
     {
-        _stream ??= File.OpenRead(Path);
-        _stream.Position = offset;
-        _stream.ReadExactly(buffer);
+        Read(offset, buffer, CancellationToken.None);
+    }
+
+    public void Read(long offset, Span<byte> buffer, CancellationToken cancellationToken)
+    {
+        lock (_sync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            cancellationToken.ThrowIfCancellationRequested();
+            _stream ??= File.OpenRead(Path);
+            _stream.Position = offset;
+            _stream.ReadExactly(buffer);
+        }
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
+        lock (_sync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _stream?.Dispose();
+            _stream = null;
+        }
+
         GC.SuppressFinalize(this);
-        _stream?.Dispose();
     }
 }

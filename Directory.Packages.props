@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Override with -p:RedFoxPackageVersion=<version> when using a local RedFox package feed. -->
+    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.1.6</RedFoxPackageVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="RedFox.Compression.LZ4" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.GameExtraction" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.GameExtraction.CommandLine" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.GameExtraction.Hashing" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.GameExtraction.UI" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Graphics3D" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Graphics3D.Formats" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Imaging" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Imaging.Formats" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Imaging.Vulkan" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.IO" Version="2026.10.2-local.g6618695.t20261002171354" />
+    <PackageVersion Include="RedFox.Patterns" Version="2026.10.2-local.g6618695.t20261002171354" />
+  </ItemGroup>
+</Project>
