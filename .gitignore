@@ -428,3 +428,6 @@ launchSettings.json
 # Claude
 CLAUDE.md
 PROMPT.md
+
+# Packages
+packages.lock.json

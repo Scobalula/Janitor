@@ -8,7 +8,6 @@ internal static class Program
     private static Task<int> Main(string[] args) => GameExtractionCommandLineApp.RunAsync(new GameExtractionCommandLineConfig
     {
         AssetManagerFactory = JanitorAssetManagerFactory.Create,
-        ExportConfigurationFactory = JanitorSettings.CreateExportConfiguration,
         Settings = JanitorSettings.CreateDefaults(),
         SettingDefinitions = JanitorSettings.Definitions,
         Title = "Janitor",

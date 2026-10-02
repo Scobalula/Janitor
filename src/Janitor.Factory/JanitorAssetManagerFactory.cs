@@ -25,6 +25,7 @@ public static class JanitorAssetManagerFactory
         manager.RegisterService(new AssetFileSystemService(manager));
 
         manager.RegisterSourceReader(new Pack2SourceReader());
+        manager.RegisterHandler(new RawAssetHandler(true)); // We sit this at top so if raw is ticked, it'll enforce it
         manager.RegisterHandler(new MeshResourceHandler());
         manager.RegisterHandler(new MaterialResourceHandler());
         manager.RegisterHandler(new TextureResourceHandler());
@@ -32,7 +33,7 @@ public static class JanitorAssetManagerFactory
         manager.RegisterHandler(new ClipResourceHandler());
         manager.RegisterHandler(new WwiseMediaResourceHandler());
         manager.RegisterHandler(new WwiseBankResourceHandler());
-        manager.RegisterHandler(new RawAssetHandler());
+        manager.RegisterHandler(new RawAssetHandler(false));
 
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();

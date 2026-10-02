@@ -16,7 +16,7 @@ public class WwiseMediaResourceHandler : IAssetHandler
     public const string ConvertAudioOption = "ConvertAudio";
 
     /// <inheritdoc/>
-    public bool CanHandle(Asset asset)
+    public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;
@@ -52,7 +52,7 @@ public class WwiseMediaResourceHandler : IAssetHandler
 
         var exists = File.Exists(context.ResolveAssetPath(asset)) || File.Exists(context.ResolveAssetPath(asset, WwiseMediaConverter.OutputExtension));
 
-        return Task.FromResult(context.ExportConfiguration.Overwrite || !exists);
+        return Task.FromResult(context.Configuration.GetOption("Overwrite", false) || !exists);
     }
 
     /// <inheritdoc/>
@@ -61,7 +61,7 @@ public class WwiseMediaResourceHandler : IAssetHandler
         var media = result.GetData<byte[]>();
         var outputPath = context.ResolveAssetPath(result.Asset);
 
-        if (context.ExportConfiguration.GetOption(ConvertAudioOption, true) && WwiseMediaConverter.TryConvert(media, out var wave))
+        if (context.Configuration.GetOption(ConvertAudioOption, true) && WwiseMediaConverter.TryConvert(media, out var wave))
         {
             media = wave;
             outputPath = context.ResolveAssetPath(result.Asset, WwiseMediaConverter.OutputExtension);

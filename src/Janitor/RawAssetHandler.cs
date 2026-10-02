@@ -7,16 +7,20 @@ namespace Janitor;
 /// <summary>
 /// Reads and exports assets as raw byte-for-byte files.
 /// </summary>
-public sealed class RawAssetHandler : IAssetHandler
+/// <param name="rawOverrideInstance">Defines if this is the instance used as a raw-overide.</param>
+public sealed class RawAssetHandler(bool rawOverrideInstance) : IAssetHandler
 {
     /// <summary>
     /// Determines whether this handler can process the supplied asset.
     /// </summary>
     /// <param name="asset">The asset being evaluated.</param>
     /// <returns>Always <see langword="true"/> for this template handler.</returns>
-    public bool CanHandle(Asset asset)
+    public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
-        return true;
+        if (rawOverrideInstance && configuration.GetOption("ReadRawAssets", true))
+            return true;
+
+        return !rawOverrideInstance;
     }
 
     /// <summary>
@@ -58,7 +62,7 @@ public sealed class RawAssetHandler : IAssetHandler
         ArgumentNullException.ThrowIfNull(context);
 
         string outputPath = context.ResolveAssetPath(asset);
-        bool shouldExport = !File.Exists(outputPath) || context.ExportConfiguration.Overwrite;
+        bool shouldExport = !File.Exists(outputPath) || context.Configuration.GetOption("Overwrite", false);
         return Task.FromResult(shouldExport);
     }
 
@@ -78,7 +82,7 @@ public sealed class RawAssetHandler : IAssetHandler
 
         string outputPath = context.ResolveAssetPath(result.Asset);
 
-        if (File.Exists(outputPath) && !context.ExportConfiguration.Overwrite)
+        if (File.Exists(outputPath) && !context.Configuration.GetOption("Overwrite", false))
         {
             return;
         }

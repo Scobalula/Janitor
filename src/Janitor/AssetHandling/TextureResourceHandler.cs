@@ -16,7 +16,7 @@ public class TextureResourceHandler : TextureHandler
     private readonly DdsImageTranslator _translator = new();
 
     /// <inheritdoc/>
-    public override bool CanHandle(Asset asset)
+    public override bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;

@@ -1,4 +1,4 @@
-﻿using Janitor.Pack2FileSystem;
+using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
 using RedFox.Graphics3D;
 using RedFox.IO;
@@ -11,7 +11,7 @@ namespace Janitor.AssetHandling;
 
 public class SkeletonResourceHandler : IAssetHandler
 {
-    public bool CanHandle(Asset asset)
+    public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;

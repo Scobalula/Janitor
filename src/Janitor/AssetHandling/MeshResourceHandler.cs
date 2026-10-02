@@ -15,7 +15,7 @@ public class MeshResourceHandler : ModelHandler
     private static readonly byte[] AttributeSizes = [ 0x04, 0x08, 0x0C, 0x10, 0x04, 0x04, 0x04, 0x04, 0x08, 0x04, 0x08, 0x10, 0x08, 0x08, 0x01, 0x04, 0x02, ];
 
     /// <inheritdoc/>
-    public override bool CanHandle(Asset asset)
+    public override bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;
@@ -344,13 +344,10 @@ public class MeshResourceHandler : ModelHandler
         bool[] usedMaterialIndices = new bool[materialCount];
         foreach (MeshLod lod in lodsToRead)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             foreach (MeshPrimitive primitive in lod.Primitives)
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 foreach (MeshVariant variant in variantsToRead)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
                     usedMaterialIndices[variant.MaterialIndices[primitive.MaterialIndex]] = true;
                 }
             }
@@ -386,6 +383,7 @@ public class MeshResourceHandler : ModelHandler
         }
 
         var scenes = new List<Scene>(lodsToRead.Length * variantsToRead.Length);
+        var exportAllLods = context.Configuration.GetOption<bool>("ReadAllLODs");
 
         foreach (var lod in lodsToRead)
         {
@@ -398,7 +396,6 @@ public class MeshResourceHandler : ModelHandler
             var skinBones = skeletonRoot?.GetAttribute<SkeletonBone[]>("OriginalTable");
             var meshes = lod.Primitives.Select(primitive =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 return ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones, cancellationToken);
             }).ToArray();
 
@@ -411,6 +408,9 @@ public class MeshResourceHandler : ModelHandler
 
                 scenes.Add(CreateScene(sceneName, meshes, materials, skeletonRoot));
             }
+
+            if (!exportAllLods)
+                break;
         }
 
         return new AssetReadResult
@@ -423,6 +423,8 @@ public class MeshResourceHandler : ModelHandler
 
     private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var vertexMap = new int[primitive.VertexCount];
         var positionsAttribute = FindAttribute(primitive, 0) ?? throw new InvalidDataException($"Primitive in LOD {primitive.LODIndex} has no POSITION attribute.");
 

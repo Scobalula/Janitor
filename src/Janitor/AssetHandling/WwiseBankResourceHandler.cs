@@ -11,7 +11,7 @@ namespace Janitor.AssetHandling;
 public class WwiseBankResourceHandler : IAssetHandler
 {
     /// <inheritdoc/>
-    public bool CanHandle(Asset asset)
+    public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;
@@ -61,7 +61,7 @@ public class WwiseBankResourceHandler : IAssetHandler
         {
             var outputPath = Path.Combine(bankDirectory, $"{media.Id}.wem");
 
-            if (File.Exists(outputPath) && !context.ExportConfiguration.Overwrite)
+            if (File.Exists(outputPath) && !context.Configuration.GetOption("Overwrite", false))
                 continue;
 
             await File.WriteAllBytesAsync(outputPath, media.Data, cancellationToken);

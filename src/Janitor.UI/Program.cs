@@ -1,6 +1,7 @@
 using Janitor.Factory;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.UI;
+using RedFox.GameExtraction.UI.ViewModels;
 
 namespace Janitor.UI;
 
@@ -24,9 +25,8 @@ internal static class Program
             SupportsFileSources = true,
             SupportsDirectorySources = false,
             SupportsProcessSources = false,
-            ExportConfigurationFactory = JanitorSettings.CreateExportConfiguration,
             Settings = JanitorSettings.CreateDefaults(),
-            SettingDefinitions = JanitorSettings.Definitions,
+            SettingDefinitions = [.. JanitorSettings.Definitions, .. ScenePreviewSettings.SettingDefinitions],
             About = new AboutConfig
             {
                 Description = "An asset extractor for Northlight Engine games, including Alan Wake 2, Control, and FBC: Firebreak.",

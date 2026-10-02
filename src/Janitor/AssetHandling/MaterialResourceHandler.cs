@@ -1,4 +1,4 @@
-﻿using Janitor.Metadata;
+using Janitor.Metadata;
 using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
@@ -19,7 +19,7 @@ public class MaterialResourceHandler : IAssetHandler
     private const uint ControlResonantVersion = 0x14;
 
     /// <inheritdoc/>
-    public bool CanHandle(Asset asset)
+    public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;
@@ -37,9 +37,9 @@ public class MaterialResourceHandler : IAssetHandler
         var material = result.GetData<Material>();
         var manager = context.GetRequiredService<ImageTranslatorService>().Manager;
         var materialDirectory = Path.Combine(context.OutputDirectory, result.Asset.Name);
-        var imageFormats = context.ExportConfiguration.GetOption("ImageFormats", TextureHandler.DefaultFormats);
-        var relativeImages = context.ExportConfiguration.GetOption("RelativeImages", false);
-        var skipExistingImages = context.ExportConfiguration.GetOption("SkipExistingImages", true);
+        var imageFormats = context.Configuration.GetOption("ImageFormats", TextureHandler.DefaultFormats);
+        var relativeImages = context.Configuration.GetOption("RelativeImages", false);
+        var skipExistingImages = context.Configuration.GetOption("SkipExistingImages", true);
 
         foreach (var texture in material.EnumerateChildren<Texture>())
         {

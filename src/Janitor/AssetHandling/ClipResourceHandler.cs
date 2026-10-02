@@ -18,7 +18,7 @@ public class ClipResourceHandler : AnimationHandler
     private const float PositionScale = 100.0f;
 
     /// <inheritdoc/>
-    public override bool CanHandle(Asset asset)
+    public override bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
         if (asset.Source is not Pack2Source)
             return false;

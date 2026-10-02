@@ -4,7 +4,7 @@ using RedFox.GameExtraction;
 namespace Janitor.Factory;
 
 /// <summary>
-/// Provides the setting definitions, defaults, and export configuration mapping shared by the Janitor frontends.
+/// Provides the setting definitions and defaults shared by the Janitor frontends.
 /// </summary>
 public static class JanitorSettings
 {
@@ -13,6 +13,7 @@ public static class JanitorSettings
     /// </summary>
     public static IReadOnlyList<GameExtractionSetting> Definitions { get; } =
     [
+        // General Settings
         new GameExtractionSetting
         {
             Name = "OutputDirectory",
@@ -23,35 +24,20 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
-            Name = "Overwrite",
+            Name = "ReadRawAssets",
             Group = GameExtractionSettingGroup.Export,
-            Label = "Overwrite existing files",
+            Label = "Read and export raw assets.",
             Type = GameExtractionSettingType.Boolean,
+            Description = "Read assets as-is from the package. This setting also affects the previewer.",
             DefaultValue = false,
         },
         new GameExtractionSetting
         {
-            Name = "PreserveDirectoryStructure",
-            Group = GameExtractionSettingGroup.Export,
-            Label = "Preserve directory structure",
-            Type = GameExtractionSettingType.Boolean,
-            DefaultValue = true,
-        },
-        new GameExtractionSetting
-        {
-            Name = "ExportReferences",
-            Group = GameExtractionSettingGroup.Export,
-            Label = "Export referenced assets",
-            Type = GameExtractionSettingType.Boolean,
-            DefaultValue = false,
-        },
-        new GameExtractionSetting
-        {
-            Name = "ImageFormat",
+            Name = "ImageFormats",
             Group = GameExtractionSettingGroup.Image,
-            Label = "Image format",
-            Type = GameExtractionSettingType.Choice,
-            Options = [".dds", ".png", ".tga"],
+            Label = "Image formats",
+            Description = "Comma-separated list of image extensions.",
+            Type = GameExtractionSettingType.TextArray,
             DefaultValue = ".dds",
         },
         new GameExtractionSetting
@@ -77,8 +63,8 @@ public static class JanitorSettings
             Group = GameExtractionSettingGroup.Model,
             Label = "Model formats",
             Description = "List of export extensions/formats.",
-            Type = GameExtractionSettingType.Text,
-            DefaultValue = ".cast .semodel",
+            Type = GameExtractionSettingType.TextArray,
+            DefaultValue = ".cast, .semodel",
         },
         new GameExtractionSetting
         {
@@ -98,6 +84,24 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
+            Name = "ReadAllLODs",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Read and export all model LODs.",
+            Description = "This setting also affects the previewer.",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
+        },
+        new GameExtractionSetting
+        {
+            Name = "ReadAllVariants",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Read and export all model variants.",
+            Description = "This setting also affects the previewer.",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
+        },
+        new GameExtractionSetting
+        {
             Name = "SkipExistingModels",
             Group = GameExtractionSettingGroup.Model,
             Label = "Skip already exported models.",
@@ -110,7 +114,7 @@ public static class JanitorSettings
             Group = GameExtractionSettingGroup.Animation,
             Label = "Animation formats",
             Description = "Comma separated list of animation file extensions.",
-            Type = GameExtractionSettingType.Text,
+            Type = GameExtractionSettingType.TextArray,
             DefaultValue = ".seanim, .cast",
         },
         new GameExtractionSetting
@@ -132,38 +136,4 @@ public static class JanitorSettings
         Values = Definitions.ToDictionary(setting => setting.Name, setting => setting.DefaultValue?.ToString(), StringComparer.OrdinalIgnoreCase),
     };
 
-    /// <summary>
-    /// Builds an export configuration from persisted setting values.
-    /// </summary>
-    /// <param name="settings">The persisted settings.</param>
-    /// <returns>The export configuration.</returns>
-    public static ExportConfiguration CreateExportConfiguration(GameExtractionSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-
-        string outputDirectory = GetValue(settings, "OutputDirectory");
-
-        ExportConfiguration configuration = new()
-        {
-            OutputDirectory = string.IsNullOrWhiteSpace(outputDirectory) ? GameExtractionSettings.GetDefaultOutputDirectory() : outputDirectory,
-            Overwrite = GetBoolean(settings, "Overwrite"),
-            PreserveDirectoryStructure = GetBoolean(settings, "PreserveDirectoryStructure"),
-            ExportReferences = GetBoolean(settings, "ExportReferences"),
-        };
-
-        configuration.SetOption("ImageFormats", new[] { GetValue(settings, "ImageFormat") });
-        configuration.SetOption("SkipExistingImages", GetBoolean(settings, "SkipExistingImages"));
-        configuration.SetOption("RelativeImages", GetBoolean(settings, "RelativeImages"));
-        configuration.SetOption("ModelFormats", GetFormats(settings, "ModelFormats"));
-        configuration.SetOption("AnimationFormats", GetFormats(settings, "AnimationFormats"));
-        configuration.SetOption(WwiseMediaResourceHandler.ConvertAudioOption, GetBoolean(settings, WwiseMediaResourceHandler.ConvertAudioOption));
-
-        return configuration;
-    }
-
-    private static string GetValue(GameExtractionSettings settings, string name) => settings.GetSettingValue(Definitions.First(setting => setting.Name == name)) ?? string.Empty;
-
-    private static bool GetBoolean(GameExtractionSettings settings, string name) => bool.TryParse(GetValue(settings, name), out bool value) && value;
-
-    private static string[] GetFormats(GameExtractionSettings settings, string name) => GetValue(settings, name).Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }
