@@ -2,6 +2,8 @@
 
 Janitor is an asset extractor for Northlight Engine Games. It provides a CLI and UI for exporting various assets including Animations, Models, Sounds, and more.
 
+###  Janitor is currently in an alpha state, so expect bugs, crashes, and other issues. Please report anything you run into — bug reports, UX feedback, suggestions, and general improvements are all greatly appreciated! You can open logs folder via Settings, please include this and as much detail as you can when reporting issues!
+
 ## Supported Games and Content
 
 Janitor recognizes common Northlight resources and converts the following:
@@ -11,7 +13,7 @@ Janitor recognizes common Northlight resources and converts the following:
 | Models | ❌ | ❌ | ✅ | ✅ | ✅ | `.semodel`, `.cast`, `.fbx`, `.psk`, `.gltf`, `.ma`, `.md5`, `.obj`, `.smd`, `.xmodel_export`, `.xmodel_bin` |
 | Animations | ❌ | ❌ | ✅ | ✅ | ✅ | `.seanim`, `.cast` |
 | Textures | ❌ | ❌ | ✅ | ✅ | ✅ | `.dds`, `.jpg`, `.png`, `.tga`, `.bmp`, `.tiff` |
-| Materials | ❌ | ❌ | 🟡 | 🟡 | 🟡 | Exports textures grouped by material |
+| Materials | ❌ | ❌ | 🟡 | 🟡 | 🟡 | Exports textures grouped by material. Settings and other info dumping is a WIP. |
 | Audio | ❌ | ❌ | ✅ | ✅ | ✅ | `.wav`, `.flac` |
 
 > **Note:** Additional formats supported by the backend may also work, but only the formats listed above are currently confirmed.
@@ -40,8 +42,10 @@ The main actions are:
 - **Double-click an asset** — Quickly export that asset.
 - **Manage Sources** — View loaded sources and unload individual sources.
 - **Clear All** — Remove all loaded assets and unload all sources.
-- **Settings** — Open Janitor's configuration options.
+- **Settings** — Open Janitor's configuration options and options for logs/plugins.
 - **About** — Display application and version information.
+
+***Please note plugins are a heavy WIP and are not yet supported.***
 
 The asset list can be filtered by **asset type** and **source**, and sorted by **name**, **information**, or **type**.
 

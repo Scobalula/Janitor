@@ -1,4 +1,5 @@
 using Janitor.Factory;
+using RedFox.GameExtraction;
 using RedFox.GameExtraction.CommandLine;
 
 namespace Janitor.CLI;
@@ -19,5 +20,10 @@ internal static class Program
             Accent = "#4AC7EE",
         },
         Commands = [new NamesCommand()],
+        Donation = new DonationConfig
+        {
+            Url = "https://ko-fi.com/scobalula",
+            Message = "Janitor is free and always will be. If it saved you some time, consider buying me a coffee!",
+        },
     }, args);
 }
