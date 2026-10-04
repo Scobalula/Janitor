@@ -22,7 +22,7 @@ Janitor can also export any game file as raw bytes. Unsupported asset types fall
 
 ## Getting Started
 
-Go to the [Releases](releases) to find the latest release. At the moment Janitor is in Alpha.
+Go to the [Releases](/releases/) to find the latest release. At the moment Janitor is in Alpha.
 
 Download the latest release ZIP, extract it, and run either:
 
