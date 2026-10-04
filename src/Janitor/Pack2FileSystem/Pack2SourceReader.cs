@@ -178,6 +178,20 @@ public sealed class Pack2SourceReader : IAssetSourceReader
                     dir.MoveTo(root);
             }
 
+            var directoryPaths = new Dictionary<VirtualDirectory, string>(ReferenceEqualityComparer.Instance)
+            {
+                [root] = tocName,
+            };
+            var pendingDirectories = new Stack<VirtualDirectory>(root.Directories);
+
+            while (pendingDirectories.TryPop(out var directoryEntry))
+            {
+                directoryPaths[directoryEntry] = Path.Combine(directoryPaths[directoryEntry.Parent!], directoryEntry.Name);
+
+                foreach (var child in directoryEntry.Directories)
+                    pendingDirectories.Push(child);
+            }
+
             var resourceTable = assetManager.GetRequiredService<ResourceTableService>().Resources;
 
             // Step 4: Build resource ID map
@@ -190,7 +204,8 @@ public sealed class Pack2SourceReader : IAssetSourceReader
             // Finally, add assets for all files
             foreach (var file in toc.Files)
             {
-                var asset = new Asset(file.FullPath, Path.GetExtension(file.Name), file, $"Size: 0x{file.Size:X}");
+                var fullPath = file.Parent is not null && directoryPaths.TryGetValue(file.Parent, out var parentPath) ? Path.Combine(parentPath, file.Name) : file.FullPath;
+                var asset = new Asset(fullPath, Path.GetExtension(file.Name), file, $"Size: 0x{file.Size:X}");
                 file.Data = asset;
                 toc.AddAsset(asset);
             }

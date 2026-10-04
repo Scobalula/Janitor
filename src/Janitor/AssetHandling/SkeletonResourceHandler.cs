@@ -25,7 +25,29 @@ public class SkeletonResourceHandler : IAssetHandler
 
     public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var scene = result.GetData<Scene>();
+
+        var translator = context.GetRequiredService<SceneTranslatorService>().Manager;
+        var formats = context.Configuration.GetOption("SkeletonFormats", DefaultFormats);
+        var skipExisting = context.Configuration.GetOption("SkipExistingSkeletons", true);
+
+        foreach (var format in formats)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var outputPath = context.ResolveAssetPath(result.Asset, format);
+
+            if (skipExisting && File.Exists(outputPath))
+                continue;
+
+            var outputDirectory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrWhiteSpace(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
+
+            await translator.WriteAsync(outputPath, scene, new(), cancellationToken);
+        }
     }
 
     public async Task<AssetReadResult> ReadAsync(Asset asset, AssetReadContext context, CancellationToken cancellationToken)
@@ -37,7 +59,7 @@ public class SkeletonResourceHandler : IAssetHandler
         if (asset.DataSource is not Pack2File file)
             throw new NotSupportedException("Only Pack2File data sources are supported.");
 
-        var skeletonGroup = new Group(asset.Name);
+        var skeletonScene = new Scene(Path.GetFileNameWithoutExtension(asset.Name));
 
         using var reader = new BinaryReader(file.Open());
 
@@ -84,7 +106,7 @@ public class SkeletonResourceHandler : IAssetHandler
 
         reader.BaseStream.Position = parentIndicesOffset;
 
-        skeletonGroup.LinkHierarchyUnsafe(bones, reader.ReadStructArray<short>(boneCount));
+        skeletonScene.LinkHierarchyUnsafe(bones, reader.ReadStructArray<short>(boneCount));
 
         reader.BaseStream.Position = boneInfoOffset;
 
@@ -110,18 +132,28 @@ public class SkeletonResourceHandler : IAssetHandler
             bones[i].Name = reader.ReadUTF8NullTerminatedString(namePointers[i] + startOfNames);
 
         // Store the original table for skinning on an attribute.
-        skeletonGroup.SetAttribute("OriginalTable", bones);
+        skeletonScene.SetAttribute("OriginalTable", bones);
 
         return new AssetReadResult
         {
             Asset = asset,
             Handler = this,
-            Data = skeletonGroup
+            Data = skeletonScene
         };
     }
 
-    public async Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
+    public Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var formats = context.Configuration.GetOption("SkeletonFormats", DefaultFormats);
+        var skipExisting = context.Configuration.GetOption("SkipExistingSkeletons", true);
+
+        if (formats.Length == 0)
+            return Task.FromResult(false);
+
+        return Task.FromResult(!skipExisting || formats.Any(format => !File.Exists(context.ResolveAssetPath(asset, format))));
     }
+
+    private static readonly string[] DefaultFormats = [".cast", ".semodel"];
 }

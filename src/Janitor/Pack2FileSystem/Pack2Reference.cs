@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
 
 namespace Janitor.Pack2FileSystem;
 
@@ -16,7 +17,8 @@ namespace Janitor.Pack2FileSystem;
 public class Pack2Reference(string path) : IDisposable
 {
     private readonly object _sync = new();
-    private Stream? _stream;
+    private SafeFileHandle? _handle;
+    private int _activeReads;
     private bool _disposed;
 
     /// <summary>
@@ -31,13 +33,38 @@ public class Pack2Reference(string path) : IDisposable
 
     public void Read(long offset, Span<byte> buffer, CancellationToken cancellationToken)
     {
+        SafeFileHandle handle;
+
         lock (_sync)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             cancellationToken.ThrowIfCancellationRequested();
-            _stream ??= File.OpenRead(Path);
-            _stream.Position = offset;
-            _stream.ReadExactly(buffer);
+            _handle ??= File.OpenHandle(Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            handle = _handle;
+            _activeReads++;
+        }
+
+        try
+        {
+            int consumed = 0;
+            while (consumed < buffer.Length)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int read = RandomAccess.Read(handle, buffer[consumed..], offset + consumed);
+                if (read == 0)
+                    throw new EndOfStreamException();
+
+                consumed += read;
+            }
+        }
+        finally
+        {
+            lock (_sync)
+            {
+                _activeReads--;
+                if (_activeReads == 0)
+                    Monitor.PulseAll(_sync);
+            }
         }
     }
 
@@ -52,8 +79,11 @@ public class Pack2Reference(string path) : IDisposable
             }
 
             _disposed = true;
-            _stream?.Dispose();
-            _stream = null;
+            while (_activeReads > 0)
+                Monitor.Wait(_sync);
+
+            _handle?.Dispose();
+            _handle = null;
         }
 
         GC.SuppressFinalize(this);

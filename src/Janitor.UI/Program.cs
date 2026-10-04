@@ -31,10 +31,7 @@ internal static class Program
             About = new AboutConfig
             {
                 Description = "An asset extractor for Northlight Engine games, including Alan Wake 2, Control, and FBC: Firebreak.",
-                Links =
-                    [
-                        new(){ Label = "Github", Url = "https://github.com/Scobalula/Janitor"}
-                    ],
+                Links = [ new(){ Label = "Github", Url = "https://github.com/Scobalula/Janitor"} ],
             },
         };
 

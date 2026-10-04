@@ -69,6 +69,23 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
+            Name = "SkeletonFormats",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Skeleton formats",
+            Description = "List of export extensions/formats.",
+            Type = GameExtractionSettingType.TextArray,
+            DefaultValue = ".cast, .semodel",
+        },
+        new GameExtractionSetting
+        {
+            Name = "SkipExistingSkeletons",
+            Group = GameExtractionSettingGroup.Model,
+            Label = "Skip skeletons that already exist",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
+        },
+        new GameExtractionSetting
+        {
             Name = "ExportModelImages",
             Group = GameExtractionSettingGroup.Model,
             Label = "Export images with models.",

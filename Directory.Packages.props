@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Override with -p:RedFoxPackageVersion=<version> when using a local RedFox package feed. -->
-    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.3-local.g371fa1a.t20261003201312</RedFoxPackageVersion>
+    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.4-local.gd2282de.t20261004090911</RedFoxPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="RedFox.Audio" Version="$(RedFoxPackageVersion)" />

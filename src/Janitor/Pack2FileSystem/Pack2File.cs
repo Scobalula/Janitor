@@ -16,6 +16,8 @@ namespace Janitor.Pack2FileSystem;
 /// </summary>
 public class Pack2File(Pack2Source owner, string name, long size, byte[] metaDataBuffer, byte[] bufferInfo) : VirtualFile(name, size)
 {
+    private const long StreamingThreshold = 4 * 1024 * 1024;
+
     /// <summary>
     /// Gets the owner of this pack file.
     /// </summary>
@@ -75,7 +77,7 @@ public class Pack2File(Pack2Source owner, string name, long size, byte[] metaDat
     /// <inheritdoc/>
     public override Stream Open()
     {
-        return new MemoryStream(ReadAllBytes());
+        return Size <= StreamingThreshold ? new MemoryStream(ReadAllBytes()) : new Pack2FileStream(this);
     }
 
     /// <inheritdoc/>

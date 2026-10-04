@@ -54,7 +54,7 @@ public class MeshResourceHandler : ModelHandler
         if (version != 0x4E && (version < 0x57 || version > 0x5C))
             throw new NotSupportedException($"Mesh version 0x{version:X}");
 
-        SceneNode? skeletonRoot = null;
+        Scene? skeletonScene = null;
 
         if (resourceTable.TryGetValue(meshMetadata.SkeletonID, out var skeletonResource))
         {
@@ -63,7 +63,7 @@ public class MeshResourceHandler : ModelHandler
 
             var skeletonResult = await context.ReadAsync(skeletonAsset, cancellationToken);
 
-            skeletonRoot = skeletonResult.GetData<SceneNode>();
+            skeletonScene = skeletonResult.GetData<Scene>();
         }
 
         var lodCount = reader.ReadInt32();
@@ -395,7 +395,7 @@ public class MeshResourceHandler : ModelHandler
             var vertexBytes = reader.ReadBytes(lod.Layout.VertexByteCount);
             var positionOnlyVertexBytes = reader.ReadBytes(lod.Layout.PositionOnlyVertexByteCount);
             var indexBytes = reader.ReadBytes(lod.Layout.IndexByteCount);
-            var skinBones = skeletonRoot?.GetAttribute<SkeletonBone[]>("OriginalTable");
+            var skinBones = skeletonScene?.GetAttribute<SkeletonBone[]>("OriginalTable");
             var meshes = lod.Primitives.Select(primitive =>
             {
                 return ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones, cancellationToken);
@@ -408,7 +408,7 @@ public class MeshResourceHandler : ModelHandler
                 var sceneName = $"{modelName}_{string.Join('_', variant.Name.Split(Path.GetInvalidFileNameChars()))}_lod{lod.Index}";
                 var materials = lod.Primitives.Select(primitive => allMaterials[variant.MaterialIndices[primitive.MaterialIndex]]!).ToArray();
 
-                scenes.Add(CreateScene(sceneName, meshes, materials, skeletonRoot));
+                scenes.Add(CreateScene(sceneName, meshes, materials, skeletonScene));
             }
 
             if (!exportAllLods)
@@ -478,17 +478,24 @@ public class MeshResourceHandler : ModelHandler
         return mesh;
     }
 
-    private static Scene CreateScene(string name, Mesh[] meshes, Material[] materials, SceneNode? skeletonRoot)
+    private static Scene CreateScene(string name, Mesh[] meshes, Material[] materials, Scene? skeletonScene)
     {
         var scene = new Scene(name);
         var bones = new Dictionary<SkeletonBone, SkeletonBone>();
 
-        if (skeletonRoot is not null)
+        if (skeletonScene is not null)
         {
-            var skeleton = scene.AddNode(skeletonRoot.Clone());
-            bones = skeletonRoot.EnumerateHierarchy<SkeletonBone>().Zip(skeleton.EnumerateHierarchy<SkeletonBone>()).ToDictionary();
+            var skeleton = scene.AddNode(new Group(skeletonScene.Name));
 
-            skeleton.SetAttribute("OriginalTable", skeletonRoot.GetAttribute<SkeletonBone[]>("OriginalTable").Select(bone => bones[bone]).ToArray());
+            if (skeletonScene.Children is { } rootBones)
+            {
+                foreach (var rootBone in rootBones)
+                    skeleton.AddNode(rootBone.Clone());
+            }
+
+            bones = skeletonScene.EnumerateHierarchy<SkeletonBone>().Zip(skeleton.EnumerateHierarchy<SkeletonBone>()).ToDictionary();
+
+            skeleton.SetAttribute("OriginalTable", skeletonScene.GetAttribute<SkeletonBone[]>("OriginalTable").Select(bone => bones[bone]).ToArray());
         }
 
         var materialClones = new Dictionary<Material, Material>();
