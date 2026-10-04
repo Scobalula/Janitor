@@ -8,7 +8,7 @@ namespace Janitor.Metadata;
 /// </summary>
 public class MeshMetadata : IMetadata
 {
-    private const int ControlResonantVersion = 38;
+    private const int ClutterLayerVersion = 38;
 
     /// <summary>
     /// Gets the minimum corner of the mesh bounding box.
@@ -167,7 +167,7 @@ public class MeshMetadata : IMetadata
         _ = reader.Read<int>();
         SkeletonID = reader.Read<ulong>();
 
-        if (version < ControlResonantVersion)
+        if (version < ClutterLayerVersion)
         {
             var unknownStringLength = reader.Read<int>();
             reader.Position += unknownStringLength;
@@ -182,7 +182,7 @@ public class MeshMetadata : IMetadata
         RBFCutoffLod = reader.Read<int>();
         WrinkleCutoffLod = reader.Read<int>();
 
-        if (version >= ControlResonantVersion)
+        if (version >= ClutterLayerVersion)
             DialogueIdleCutoffLod = reader.Read<int>();
 
         NumberOfLods = reader.Read<int>();
@@ -217,13 +217,13 @@ public class MeshMetadata : IMetadata
             SubMeshIDs.Add(reader.Read<ulong>());
         }
 
-        if (version >= ControlResonantVersion)
+        if (version >= ClutterLayerVersion)
             SkinnedVariantCount = reader.Read<int>();
 
         _ = reader.Read<int>();
         GeometryTransformShaderID = reader.Read<ulong>();
 
-        if (version >= ControlResonantVersion)
+        if (version >= ClutterLayerVersion)
             ClutterLayer = reader.Read<int>();
         else
             SkinnedVariantCount = reader.Read<int>();

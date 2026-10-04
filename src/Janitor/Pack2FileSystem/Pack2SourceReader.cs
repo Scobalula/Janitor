@@ -11,7 +11,7 @@ using System.Xml.Linq;
 namespace Janitor.Pack2FileSystem;
 
 /// <summary>
-/// Reads Alan Wake 2 Pack2 TOC files and mounts them into the <see cref="AssetManager"/>.
+/// Reads Northlight Pack2 TOC files and mounts them into the <see cref="AssetManager"/>.
 /// </summary>
 public sealed class Pack2SourceReader : IAssetSourceReader
 {

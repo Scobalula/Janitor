@@ -13,7 +13,7 @@ internal static class Program
         Title = "Janitor",
         Description = "An asset extractor for Northlight Engine games.",
         AppName = "Janitor",
-        Version = "1.0.0",
+        Version = JanitorBuildInfo.DisplayVersion,
         Theme = new CommandLineTheme
         {
             Accent = "#4AC7EE",

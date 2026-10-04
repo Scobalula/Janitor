@@ -2,7 +2,6 @@ using Janitor.Factory;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.UI;
 using RedFox.GameExtraction.UI.ViewModels;
-using System.Reflection.Emit;
 
 namespace Janitor.UI;
 
@@ -20,7 +19,7 @@ internal static class Program
             AppName = "Janitor",
             IconPath = Path.Combine(AppContext.BaseDirectory, "Icon.png"),
             SidebarIconPath = Path.Combine(AppContext.BaseDirectory, "Icon.png"),
-            Version = "1.0.0",
+            Version = JanitorBuildInfo.DisplayVersion,
             AccentColor = "#037599",
             FileFilter = "Pack2 TOC Files|*.rmdtoc|All Files|*.*",
             SupportsFileSources = true,

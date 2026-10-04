@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build type to publish
+        required: true
+        type: choice
+        options:
+          - Alpha
+          - Debug
+          - Beta
+          - Release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Calculate version
+        id: version
+        run: |
+          date=$(date -u +'%Y.%-m.%-d')
+          build=$(( $(git tag -l "v$date.*" | wc -l) + 1 ))
+          build_type='${{ inputs.build_type }}'
+          prerelease=false
+          if [[ "$build_type" != "Release" ]]; then
+            prerelease=true
+          fi
+
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "value=$date.$build" >> "$GITHUB_OUTPUT"
+          echo "build_type=$build_type" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Publish UI and CLI
+        shell: pwsh
+        run: |
+          $outputPath = Join-Path $env:GITHUB_WORKSPACE 'release/current'
+          if (Test-Path -LiteralPath $outputPath) {
+            Remove-Item -LiteralPath $outputPath -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
+
+          dotnet publish src/Janitor.UI/Janitor.UI.csproj `
+            --configuration '${{ inputs.build_type }}' `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $outputPath `
+            '-p:BuildNumber=${{ steps.version.outputs.build }}' `
+            '-p:BuildDate=${{ steps.version.outputs.date }}' `
+            '-p:BuildType=${{ steps.version.outputs.build_type }}'
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Janitor.UI publish failed with exit code $LASTEXITCODE"
+          }
+
+          dotnet publish src/Janitor.CLI/Janitor.CLI.csproj `
+            --configuration '${{ inputs.build_type }}' `
+            --runtime win-x64 `
+            --self-contained true `
+            --output $outputPath `
+            '-p:BuildNumber=${{ steps.version.outputs.build }}' `
+            '-p:BuildDate=${{ steps.version.outputs.date }}' `
+            '-p:BuildType=${{ steps.version.outputs.build_type }}'
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Janitor.CLI publish failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Archive release folder
+        shell: pwsh
+        run: |
+          $archivePath = Join-Path $env:GITHUB_WORKSPACE 'release/Janitor-${{ steps.version.outputs.value }}-${{ steps.version.outputs.build_type }}.zip'
+          Compress-Archive -Path 'release/current/*' -DestinationPath $archivePath -CompressionLevel Optimal -Force
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease_option=()
+          if [[ '${{ steps.version.outputs.prerelease }}' == 'true' ]]; then
+            prerelease_option+=(--prerelease)
+          fi
+
+          gh release create \
+            'v${{ steps.version.outputs.value }}' \
+            'release/Janitor-${{ steps.version.outputs.value }}-${{ steps.version.outputs.build_type }}.zip' \
+            --title 'Janitor v${{ steps.version.outputs.value }} (${{ steps.version.outputs.build_type }})' \
+            --generate-notes \
+            "${prerelease_option[@]}"

@@ -1,4 +1,5 @@
 using Janitor.Factory;
+using Janitor.Pack2FileSystem;
 using Janitor.Wwise;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.CommandLine;
@@ -53,7 +54,7 @@ internal sealed class NamesCommand : ICommandLineCommand
 
             if (target is MediaKeyword or AllKeyword)
             {
-                mediaTable = await BuildMediaTableAsync(session.Manager, fileSystem, nameTables, context, cancellationToken);
+                mediaTable = BuildMediaTable(fileSystem, nameTables, context, cancellationToken);
             }
         });
 
@@ -94,7 +95,7 @@ internal sealed class NamesCommand : ICommandLineCommand
         return table;
     }
 
-    private static async Task<NameTable> BuildMediaTableAsync(AssetManager manager, VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken)
+    private static NameTable BuildMediaTable(VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken)
     {
         NameTable table = GetEmptyTable(nameTables, WwiseMediaNameResolver.TableName);
         WwiseMediaNameResolver resolver = new();
@@ -103,8 +104,14 @@ internal sealed class NamesCommand : ICommandLineCommand
 
         foreach (Asset asset in banks)
         {
-            AssetReadResult result = await manager.ReadAsync(asset, cancellationToken);
-            resolver.AddBank(Path.GetFileNameWithoutExtension(asset.Name), result.GetData<WwiseBank>());
+            if (asset.DataSource is not Pack2File file || file.Size < 16)
+            {
+                task.Increment(1);
+                continue;
+            }
+
+            WwiseBank bank = WwiseBank.Read(file.ReadAllBytes(cancellationToken));
+            resolver.AddBank(Path.GetFileNameWithoutExtension(asset.Name), bank);
             task.Increment(1);
         }
 

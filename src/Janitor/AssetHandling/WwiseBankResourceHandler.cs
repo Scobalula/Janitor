@@ -13,6 +13,7 @@ namespace Janitor.AssetHandling;
 /// </summary>
 public class WwiseBankResourceHandler : IAssetHandler
 {
+    private const long MinimumBankSize = 16;
     private readonly WwiseMediaTranslator _media = new();
 
     /// <inheritdoc/>
@@ -20,9 +21,11 @@ public class WwiseBankResourceHandler : IAssetHandler
     {
         if (asset.Source is not Pack2Source)
             return false;
-        if (asset.DataSource is not Pack2File)
+        if (asset.DataSource is not Pack2File file)
             return false;
         if (!asset.Name.EndsWith(".bnk", StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (file.Size < MinimumBankSize)
             return false;
 
         return true;

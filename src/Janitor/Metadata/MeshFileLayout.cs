@@ -9,7 +9,7 @@ namespace Janitor.Metadata;
 public struct MeshFileLayout
 {
     /// <summary>
-    /// Gets or sets the region version; version 5 (Alan Wake 2) adds the cluster byte counts, version 3 (Control Resonant) omits them.
+    /// Gets or sets the region version; version 5 adds the cluster byte counts, version 3 omits them.
     /// </summary>
     public required int MeshInfoVersion { get; set; }
 

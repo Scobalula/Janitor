@@ -16,7 +16,7 @@ public class MaterialResourceHandler : IAssetHandler
 {
     private const uint LegacyVersion = 0x12;
 
-    private const uint ControlResonantVersion = 0x14;
+    private const uint MetadataResourcesVersion = 0x14;
 
     /// <inheritdoc/>
     public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
@@ -66,7 +66,7 @@ public class MaterialResourceHandler : IAssetHandler
 
         var version = reader.ReadUInt32();
 
-        if (version != LegacyVersion && version != ControlResonantVersion)
+        if (version != LegacyVersion && version != MetadataResourcesVersion)
             throw new InvalidDataException($"Invalid material resource version: 0x{version:X8}.");
 
         var settingsCount = reader.ReadInt32();

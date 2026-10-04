@@ -32,7 +32,7 @@ public class MeshResourceHandler : ModelHandler
     {
         // * Models are flipped, looks correct data-wise, even skeleton is flipped, game must be doing some transformation in vertex shader?
         // * Every LOD and variant is built as its own scene, variants only swap materials so they share geometry buffers.
-        // * Version 0x4E covers FBC: Firebreak and Alan Wake 2, 0x57 to 0x5C covers Control Resonant.
+        // * Versions 0x4E and 0x57 to 0x5C are supported.
         if (asset.Source is not Pack2Source)
             throw new NotSupportedException("Only Pack2Source assets are supported.");
         if (asset.DataSource is not Pack2File file)

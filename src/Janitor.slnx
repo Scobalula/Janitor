@@ -1,4 +1,11 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Alpha" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Beta" />
+    <BuildType Name="Release" />
+    <Platform Name="Any CPU" />
+  </Configurations>
   <Project Path="Janitor.CLI/Janitor.CLI.csproj" />
   <Project Path="Janitor.UI/Janitor.UI.csproj" />
   <Project Path="Janitor.Factory/Janitor.Factory.csproj" Id="cbb9517c-630f-47e7-83db-31e4488d4e25" />

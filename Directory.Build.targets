@@ -1,0 +1,28 @@
+<Project>
+  <Target Name="ValidateJanitorBuildType" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="'$(BuildType)' != 'Alpha' And '$(BuildType)' != 'Debug' And '$(BuildType)' != 'Beta' And '$(BuildType)' != 'Release'"
+      Text="BuildType must be Alpha, Debug, Beta, or Release. Current value: '$(BuildType)'." />
+  </Target>
+
+  <Target Name="SetJanitorVersionMetadata" BeforeTargets="GetAssemblyAttributes">
+    <ItemGroup>
+      <AssemblyMetadata Include="BuildNumber" Value="$(BuildNumber)" />
+      <AssemblyMetadata Include="BuildType" Value="$(BuildType)" />
+    </ItemGroup>
+  </Target>
+
+  <Target
+    Name="IncrementLocalBuildNumber"
+    AfterTargets="Build"
+    Condition="'$(DesignTimeBuild)' != 'true' And '$(JanitorBuildNumberOverridden)' != 'true' And '$(MSBuildProjectName)' == 'Janitor.UI'">
+    <PropertyGroup>
+      <JanitorNextBuildNumber>$([MSBuild]::Add($(BuildNumber), 1))</JanitorNextBuildNumber>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+      File="$(JanitorBuildNumberFile)"
+      Lines="$(JanitorNextBuildNumber)"
+      Overwrite="true" />
+  </Target>
+</Project>

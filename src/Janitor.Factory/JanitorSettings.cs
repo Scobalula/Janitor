@@ -137,14 +137,6 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
-            Name = WwiseMediaResourceHandler.ConvertAudioOption,
-            Group = GameExtractionSettingGroup.Sound,
-            Label = "Convert Wwise audio to the audio formats.",
-            Type = GameExtractionSettingType.Boolean,
-            DefaultValue = true,
-        },
-        new GameExtractionSetting
-        {
             Name = "AudioFormats",
             Group = GameExtractionSettingGroup.Sound,
             Label = "Audio formats",

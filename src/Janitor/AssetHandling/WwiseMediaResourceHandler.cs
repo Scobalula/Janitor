@@ -14,11 +14,6 @@ namespace Janitor.AssetHandling;
 /// </summary>
 public class WwiseMediaResourceHandler : AudioClipHandler
 {
-    /// <summary>
-    /// The name of the boolean export option that converts media to the configured audio formats, which is on when not set.
-    /// </summary>
-    public const string ConvertAudioOption = "ConvertAudio";
-
     private readonly WwiseMediaTranslator _media = new();
 
     /// <inheritdoc/>
@@ -58,39 +53,22 @@ public class WwiseMediaResourceHandler : AudioClipHandler
     }
 
     /// <inheritdoc/>
-    public override Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
+    public override async Task<bool> ShouldExportAsync(Asset asset, AssetExportContext context, CancellationToken cancellationToken)
     {
-        if (asset.DataSource is Pack2File { Size: 0 })
-            return Task.FromResult(false);
-
-        if (context.Configuration.GetOption(ConvertAudioOption, true))
-            return base.ShouldExportAsync(asset, context, cancellationToken);
-
-        return Task.FromResult(!context.Configuration.GetOption("SkipExistingAudio", true) || !File.Exists(context.ResolveAssetPath(asset)));
+        return !context.Configuration.GetOption("SkipExistingAudio", true) || !File.Exists(context.ResolveAssetPath(asset));
     }
 
     /// <inheritdoc/>
     public override async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
-        if (context.Configuration.GetOption(ConvertAudioOption, true) && result.Data is AudioClip clip)
-        {
-            AudioTranslatorManager manager = context.AssetManager.GetRequiredService<AudioTranslatorService>().Manager;
-            string[] formats = context.Configuration.GetOption("AudioFormats", DefaultFormats);
-            bool skipExisting = context.Configuration.GetOption("SkipExistingAudio", true);
-
-            ExportClip(clip, formats, manager, context.ResolveAssetPath(result.Asset), skipExisting, CreateExportOptions(clip));
+        if (result.Data is not AudioClip clip)
             return;
-        }
 
-        if (result.Asset.DataSource is not Pack2File file)
-            throw new NotSupportedException("Only Pack2File data sources are supported.");
+        AudioTranslatorManager manager = context.AssetManager.GetRequiredService<AudioTranslatorService>().Manager;
+        string[] formats = context.Configuration.GetOption("AudioFormats", DefaultFormats);
+        bool skipExisting = context.Configuration.GetOption("SkipExistingAudio", true);
 
-        string outputPath = context.ResolveAssetPath(result.Asset);
-        byte[] media = result.Data as byte[] ?? file.ReadAllBytes(cancellationToken);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-
-        await File.WriteAllBytesAsync(outputPath, media, cancellationToken);
+        ExportClip(clip, formats, manager, context.ResolveAssetPath(result.Asset), skipExisting, CreateExportOptions(clip));
     }
 
     /// <summary>

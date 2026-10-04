@@ -19,9 +19,14 @@ public readonly struct AclTracksHeader(ReadOnlySpan<byte> buffer)
     public const int Size = 32;
 
     /// <summary>
-    /// The only serialization version supported, ACL 2.1.0.
+    /// The oldest serialization version supported, ACL 2.1.0-wip, which only differs from ACL 2.1.0 in its database metadata.
     /// </summary>
-    public const ushort SupportedVersion = 10;
+    public const ushort MinimumSupportedVersion = 9;
+
+    /// <summary>
+    /// The newest serialization version supported, ACL 2.1.0.
+    /// </summary>
+    public const ushort MaximumSupportedVersion = 10;
 
     /// <summary>
     /// Gets the total size of the compressed tracks buffer in bytes.
@@ -109,7 +114,7 @@ public readonly struct AclTracksHeader(ReadOnlySpan<byte> buffer)
     public bool HasStrippedKeyframes => (MiscPacked & (1 << 10)) != 0;
 
     /// <summary>
-    /// Ensures the buffer holds uniformly sampled tracks of the given type, compressed with the supported version.
+    /// Ensures the buffer holds uniformly sampled tracks of the given type, compressed with a supported version.
     /// </summary>
     /// <param name="trackType">The type of tracks the buffer is expected to hold.</param>
     /// <exception cref="InvalidDataException">Thrown when the buffer does not contain compressed tracks of the given type.</exception>
@@ -118,7 +123,7 @@ public readonly struct AclTracksHeader(ReadOnlySpan<byte> buffer)
     {
         if (Tag != CompressedTracksTag || TrackType != trackType)
             throw new InvalidDataException($"Buffer does not contain ACL compressed {trackType} tracks.");
-        if (Version != SupportedVersion)
+        if (Version is < MinimumSupportedVersion or > MaximumSupportedVersion)
             throw new NotSupportedException($"ACL compressed tracks version {Version}");
         if (AlgorithmType != 0)
             throw new NotSupportedException($"ACL algorithm type {AlgorithmType}");

@@ -32,6 +32,7 @@ public static class JanitorAssetManagerFactory
         manager.RegisterHandler(new TextureResourceHandler());
         manager.RegisterHandler(new SkeletonResourceHandler());
         manager.RegisterHandler(new ClipResourceHandler());
+        manager.RegisterHandler(new GraphResourceHandler());
         manager.RegisterHandler(new WwiseMediaResourceHandler());
         manager.RegisterHandler(new WwiseBankResourceHandler());
         manager.RegisterHandler(new RawAssetHandler(false));

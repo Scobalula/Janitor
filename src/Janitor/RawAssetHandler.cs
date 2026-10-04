@@ -17,7 +17,7 @@ public sealed class RawAssetHandler(bool rawOverrideInstance) : IAssetHandler
     /// <returns>Always <see langword="true"/> for this template handler.</returns>
     public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
-        if (rawOverrideInstance && configuration.GetOption("ReadRawAssets", true))
+        if (rawOverrideInstance && configuration.GetOption("ReadRawAssets", false))
             return true;
 
         return !rawOverrideInstance;

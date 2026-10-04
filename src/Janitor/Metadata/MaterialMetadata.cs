@@ -3,7 +3,7 @@ using RedFox.IO;
 namespace Janitor.Metadata;
 
 /// <summary>
-/// rend::MaterialMetadata: holds the resources a material references. From material version 0x14 (Control Resonant)
+/// rend::MaterialMetadata: holds the resources a material references. From material version 0x14
 /// these are no longer stored in the .material file itself.
 /// </summary>
 public class MaterialMetadata : IMetadata
