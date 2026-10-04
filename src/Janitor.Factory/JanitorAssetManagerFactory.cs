@@ -1,6 +1,7 @@
 using Janitor.AssetHandling;
 using Janitor.Pack2FileSystem;
 using RedFox.GameExtraction;
+using System.Diagnostics;
 
 namespace Janitor.Factory;
 
@@ -37,9 +38,17 @@ public static class JanitorAssetManagerFactory
 
         manager.RegisterService<ImageTranslatorService>();
         manager.RegisterService<SceneTranslatorService>();
+        manager.RegisterService<AudioTranslatorService>();
         manager.RegisterService<ResourceTableService>();
         manager.RegisterService(NameListService.CreateFromDirectory(NameTablesDirectory));
 
+        manager.OperationFailed += Manager_OperationFailed;
+
         return manager;
+    }
+
+    private static void Manager_OperationFailed(object? sender, AssetOperationFailedEventArgs e)
+    {
+        Trace.WriteLine(e.Exception);
     }
 }

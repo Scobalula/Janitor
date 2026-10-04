@@ -2,6 +2,7 @@ using Janitor.Factory;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.UI;
 using RedFox.GameExtraction.UI.ViewModels;
+using System.Reflection.Emit;
 
 namespace Janitor.UI;
 
@@ -26,10 +27,14 @@ internal static class Program
             SupportsDirectorySources = false,
             SupportsProcessSources = false,
             Settings = JanitorSettings.CreateDefaults(),
-            SettingDefinitions = [.. JanitorSettings.Definitions, .. ScenePreviewSettings.SettingDefinitions],
+            SettingDefinitions = [.. JanitorSettings.Definitions, .. PreviewSettings.SettingDefinitions],
             About = new AboutConfig
             {
                 Description = "An asset extractor for Northlight Engine games, including Alan Wake 2, Control, and FBC: Firebreak.",
+                Links =
+                    [
+                        new(){ Label = "Github", Url = "https://github.com/Scobalula/Janitor"}
+                    ],
             },
         };
 

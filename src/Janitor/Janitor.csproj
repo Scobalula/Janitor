@@ -12,11 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Native\opus.dll" Link="Native\opus.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Native\vorbis.dll" Link="Native\vorbis.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="RedFox.Audio" />
+    <PackageReference Include="RedFox.Audio.Opus" />
     <PackageReference Include="RedFox.Compression.LZ4" />
     <PackageReference Include="RedFox.GameExtraction" />
     <PackageReference Include="RedFox.GameExtraction.Hashing" />

@@ -1,15 +1,20 @@
 using Janitor.Pack2FileSystem;
 using Janitor.Wwise;
+using RedFox.Audio;
+using RedFox.Audio.IO;
 using RedFox.GameExtraction;
+using RedFox.GameExtraction.AssetHandlers;
 
 namespace Janitor.AssetHandling;
 
 /// <summary>
-/// Handles Wwise sound bank (.bnk) assets stored in Pack2 files, exporting every embedded media file as an individual .wem file
-/// into a folder named after the bank. Banks that only hold objects and no embedded media export nothing.
+/// Handles Wwise sound bank (.bnk) assets stored in Pack2 files. The embedded media with a supported codec is read as a list of
+/// <see cref="AudioClip"/> instances, which are exported to the configured audio formats into a folder named after the bank.
 /// </summary>
 public class WwiseBankResourceHandler : IAssetHandler
 {
+    private readonly WwiseMediaTranslator _media = new();
+
     /// <inheritdoc/>
     public bool CanHandle(Asset asset, GameExtractionConfiguration configuration)
     {
@@ -31,11 +36,24 @@ public class WwiseBankResourceHandler : IAssetHandler
         if (asset.DataSource is not Pack2File file)
             throw new NotSupportedException("Only Pack2File data sources are supported.");
 
+        WwiseBank bank = WwiseBank.Read(file.ReadAllBytes(cancellationToken));
+        NameListService names = context.GetRequiredService<NameListService>();
+        List<AudioClip> clips = [];
+
+        foreach (WwiseEmbeddedMedia media in bank.Media)
+        {
+            if (!_media.TryRead(media.Data, out AudioClip? clip))
+                continue;
+
+            clip.Name = names.Manager.TryGetValue(WwiseMediaNameResolver.TableName, media.Id, out string? name) ? $"{name}_{media.Id}" : media.Id.ToString();
+            clips.Add(clip);
+        }
+
         return Task.FromResult(new AssetReadResult
         {
             Asset = asset,
             Handler = this,
-            Data = WwiseBank.Read(file.ReadAllBytes()),
+            Data = clips.ToArray(),
         });
     }
 
@@ -46,25 +64,20 @@ public class WwiseBankResourceHandler : IAssetHandler
     }
 
     /// <inheritdoc/>
-    public async Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
+    public Task ExportAsync(AssetReadResult result, AssetExportContext context, CancellationToken cancellationToken)
     {
-        var bank = result.GetData<WwiseBank>();
+        AudioClip[] clips = result.GetData<AudioClip[]>();
+        AudioTranslatorManager manager = context.AssetManager.GetRequiredService<AudioTranslatorService>().Manager;
+        string[] formats = context.Configuration.GetOption("AudioFormats", AudioClipHandler.DefaultFormats);
+        bool skipExisting = context.Configuration.GetOption("SkipExistingAudio", true);
+        string bankDirectory = Path.Combine(context.ResolveAssetDirectory(result.Asset), Path.GetFileNameWithoutExtension(result.Asset.Name));
 
-        if (bank.Media.Count == 0)
-            return;
-
-        var bankDirectory = Path.Combine(context.ResolveAssetDirectory(result.Asset), Path.GetFileNameWithoutExtension(result.Asset.Name));
-
-        Directory.CreateDirectory(bankDirectory);
-
-        foreach (var media in bank.Media)
+        foreach (AudioClip clip in clips)
         {
-            var outputPath = Path.Combine(bankDirectory, $"{media.Id}.wem");
-
-            if (File.Exists(outputPath) && !context.Configuration.GetOption("Overwrite", false))
-                continue;
-
-            await File.WriteAllBytesAsync(outputPath, media.Data, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            AudioClipHandler.ExportClip(clip, formats, manager, Path.Combine(bankDirectory, $"{clip.Name}.wem"), skipExisting, WwiseMediaResourceHandler.CreateExportOptions(clip));
         }
+
+        return Task.CompletedTask;
     }
 }

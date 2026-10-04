@@ -208,6 +208,9 @@ public class MeshResourceHandler : ModelHandler
             });
         }
 
+        var readAllVariants = context.Configuration.GetOption("ReadAllVariants", true);
+        MeshVariant[] variantsToRead = readAllVariants ? variants.ToArray() : [variants[0]];
+
         if (version >= 0x58)
             reader.ReadStructArray<int>(reader.ReadInt32());
         if (version >= 0x54)
@@ -337,7 +340,6 @@ public class MeshResourceHandler : ModelHandler
         var lods = BuildLods(meshMetadata, lodCount, primitives);
         MeshLod[] nonEmptyLods = lods.Where(lod => lod.Primitives.Count > 0).ToArray();
         MeshLod[] lodsToRead = nonEmptyLods;
-        MeshVariant[] variantsToRead = variants.ToArray();
 
         // Resolve only the materials that the output scenes will use. This keeps preview-only reads from loading
         // every material resource before knowing which output scenes use each material.

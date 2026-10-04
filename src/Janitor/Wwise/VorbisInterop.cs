@@ -60,6 +60,10 @@ internal static unsafe partial class VorbisInterop
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int ReadPcm(void* dspState, int samples);
 
+    [LibraryImport(Library, EntryPoint = "vorbis_synthesis_restart")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial int Restart(void* dspState);
+
     [LibraryImport(Library, EntryPoint = "vorbis_block_clear")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial void ClearBlock(void* block);

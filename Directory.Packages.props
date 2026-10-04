@@ -1,11 +1,12 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Override with -p:RedFoxPackageVersion=<version> when using a local RedFox package feed. -->
-    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.2-local.g8284919.t20261002214230</RedFoxPackageVersion>
+    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.3-local.g371fa1a.t20261003201312</RedFoxPackageVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="RedFox.Audio" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Audio.Opus" Version="$(RedFoxPackageVersion)" />
     <PackageVersion Include="RedFox.Compression.LZ4" Version="$(RedFoxPackageVersion)" />
     <PackageVersion Include="RedFox.GameExtraction" Version="$(RedFoxPackageVersion)" />
     <PackageVersion Include="RedFox.GameExtraction.CommandLine" Version="$(RedFoxPackageVersion)" />

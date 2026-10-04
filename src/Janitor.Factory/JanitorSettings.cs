@@ -20,7 +20,7 @@ public static class JanitorSettings
             Group = GameExtractionSettingGroup.Export,
             Label = "Output directory",
             Type = GameExtractionSettingType.DirectoryPath,
-            DefaultValue = GameExtractionSettings.GetDefaultOutputDirectory(),
+            DefaultValue = GameExtractionSettings.GetDefaultOutputDirectory("Janitor"),
         },
         new GameExtractionSetting
         {
@@ -52,7 +52,8 @@ public static class JanitorSettings
         {
             Name = "RelativeImages",
             Group = GameExtractionSettingGroup.Image,
-            Label = "Export material images next to models",
+            Label = "Export material images to a flat folder",
+            Description = "Store each material's textures together instead of preserving their paths.",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = false,
         },
@@ -76,9 +77,9 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
-            Name = "ExportLocalModelImages",
+            Name = "RelativeModelImages",
             Group = GameExtractionSettingGroup.Model,
-            Label = "Export images to the model's folder.",
+            Label = "Export model images to the model's folder.",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = false,
         },
@@ -121,7 +122,24 @@ public static class JanitorSettings
         {
             Name = WwiseMediaResourceHandler.ConvertAudioOption,
             Group = GameExtractionSettingGroup.Sound,
-            Label = "Convert Wwise Audio to Wav.",
+            Label = "Convert Wwise audio to the audio formats.",
+            Type = GameExtractionSettingType.Boolean,
+            DefaultValue = true,
+        },
+        new GameExtractionSetting
+        {
+            Name = "AudioFormats",
+            Group = GameExtractionSettingGroup.Sound,
+            Label = "Audio formats",
+            Description = "Comma-separated list of audio extensions.",
+            Type = GameExtractionSettingType.TextArray,
+            DefaultValue = ".wav",
+        },
+        new GameExtractionSetting
+        {
+            Name = "SkipExistingAudio",
+            Group = GameExtractionSettingGroup.Sound,
+            Label = "Skip audio that already exists",
             Type = GameExtractionSettingType.Boolean,
             DefaultValue = true,
         },
