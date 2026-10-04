@@ -53,6 +53,7 @@ jobs:
       - name: Publish UI and CLI
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $outputPath = Join-Path $env:GITHUB_WORKSPACE 'release/current'
           if (Test-Path -LiteralPath $outputPath) {
             Remove-Item -LiteralPath $outputPath -Recurse -Force
@@ -101,9 +102,27 @@ jobs:
             throw "OpenAL Soft source archive hash mismatch: $openAlSourceHash"
           }
 
+          $requiredFiles = @(
+            (Join-Path $outputPath 'LICENSE'),
+            (Join-Path $outputPath 'THIRD-PARTY-NOTICES.md'),
+            $openAlSourcePath
+          )
+
+          foreach ($requiredFile in $requiredFiles) {
+            if (-not (Test-Path -LiteralPath $requiredFile)) {
+              throw "Required release file is missing: $requiredFile"
+            }
+          }
+
+          $licenseCount = (Get-ChildItem -LiteralPath $licenseOutputPath -File -Recurse).Count
+          if ($licenseCount -eq 0) {
+            throw "No third-party license files were copied to $licenseOutputPath"
+          }
+
       - name: Archive release folder
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $archivePath = Join-Path $env:GITHUB_WORKSPACE 'release/Janitor-${{ steps.version.outputs.value }}-${{ steps.version.outputs.build_type }}.zip'
           Compress-Archive -Path 'release/current/*' -DestinationPath $archivePath -CompressionLevel Optimal -Force
 

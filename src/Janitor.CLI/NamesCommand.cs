@@ -78,7 +78,7 @@ internal sealed class NamesCommand : ICommandLineCommand
 
     private static async Task<NameTable> BuildBoneTableAsync(AssetManager manager, VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken, ILogger logger)
     {
-        NameTable table = GetEmptyTable(nameTables, BoneTableName);
+        NameTable table = GetOrCreateTable(nameTables, BoneTableName);
         List<Asset> skeletons = FindAssets(fileSystem, "*.binskeleton");
         ProgressTask task = context.AddTask("Bones", maxValue: skeletons.Count);
 
@@ -99,14 +99,14 @@ internal sealed class NamesCommand : ICommandLineCommand
 
         NameFile.Save(GetTablePath(BoneTableName), table, NameFileFlags.Checksum);
 
-        logger.LogInformation("Built {Table} name table with {NameCount} names from {SkeletonCount} skeletons", BoneTableName, table.Count, skeletons.Count);
+        logger.LogInformation("Updated {Table} name table to {NameCount} names from {SkeletonCount} skeletons", BoneTableName, table.Count, skeletons.Count);
 
         return table;
     }
 
     private static NameTable BuildMediaTable(VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken, ILogger logger)
     {
-        NameTable table = GetEmptyTable(nameTables, WwiseMediaNameResolver.TableName);
+        NameTable table = GetOrCreateTable(nameTables, WwiseMediaNameResolver.TableName);
         WwiseMediaNameResolver resolver = new();
         List<Asset> banks = FindAssets(fileSystem, "*.bnk");
         ProgressTask task = context.AddTask("Audio", maxValue: banks.Count);
@@ -134,19 +134,17 @@ internal sealed class NamesCommand : ICommandLineCommand
 
         NameFile.Save(GetTablePath(WwiseMediaNameResolver.TableName), table, NameFileFlags.Checksum);
 
-        logger.LogInformation("Built {Table} name table with {NameCount} names from {BankCount} sound banks", WwiseMediaNameResolver.TableName, table.Count, banks.Count);
+        logger.LogInformation("Updated {Table} name table to {NameCount} names from {BankCount} sound banks", WwiseMediaNameResolver.TableName, table.Count, banks.Count);
 
         return table;
     }
 
-    private static NameTable GetEmptyTable(NameTableManager nameTables, string name)
+    private static NameTable GetOrCreateTable(NameTableManager nameTables, string name)
     {
         if (!nameTables.TryGetTable(name, out NameTable? table))
         {
             return nameTables.CreateNameTable(name);
         }
-
-        table.Clear();
 
         return table;
     }

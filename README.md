@@ -69,7 +69,20 @@ Game names, trademarks, and other intellectual property belong to their respecti
 
 ## Credits
 
-Janitor is built on top of the RedFox libraries for asset processing, format conversion, and related functionality.
+Janitor is built on the following libraries and native binaries. Components authored by Scobalula (the Janitor author) are listed first, followed by third-party components.
 
-Janitor uses (indirectly or directly from RedFox) the following libraries:
+**Scobalula libraries**
 
+- [RedFox](https://github.com/Scobalula/RedFox) — asset processing, format conversion, graphics, imaging, compression, and related functionality
+- [Cast.NET](https://github.com/Scobalula/Cast.NET) and [CallOfFile](https://github.com/Scobalula/CallOfFile) — animation and format support
+
+**Third-party libraries**
+
+- **UI framework** — [Avalonia](https://github.com/AvaloniaUI/Avalonia), [SkiaSharp](https://github.com/mono/SkiaSharp) (with [Skia](https://skia.org/)), [HarfBuzzSharp](https://github.com/mono/SkiaSharp) (with [HarfBuzz](https://harfbuzz.github.io/)), [ANGLE](https://github.com/google/angle), [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)
+- **Graphics and windowing** — [Silk.NET](https://github.com/dotnet/Silk.NET), [GLFW](https://www.glfw.org/), [OpenAL Soft](https://github.com/kcat/openal-soft)
+- **CLI** — [Spectre.Console](https://github.com/spectreconsole/spectre.console), [PrettyPrompt](https://github.com/waf/PrettyPrompt), [TextCopy](https://github.com/CopyText/TextCopy), [Model Context Protocol C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
+- **Audio and compression** — [Opus](https://github.com/xiph/opus), [FLAC](https://github.com/xiph/flac), [libvorbis](https://github.com/xiph/vorbis) (with [libogg](https://github.com/xiph/ogg)), [LZ4](https://github.com/lz4/lz4), [Zstandard](https://github.com/facebook/zstd), [miniz](https://github.com/richgel999/miniz), [K4os.Compression.LZ4](https://github.com/MiloszKrajewski/K4os.Compression.LZ4)
+
+Full attribution, copyright notices, and license texts for every component are provided in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and the [`third_party/licenses/`](third_party/licenses) directory.
+
+I've done my best to audit the use of amazing libraries that make this work possible. If you feel a package you made was used and was not attributed, please raise an issue.
