@@ -63,7 +63,7 @@ jobs:
           dotnet publish src/Janitor.UI/Janitor.UI.csproj `
             --configuration '${{ inputs.build_type }}' `
             --runtime win-x64 `
-            --self-contained true `
+            --self-contained false `
             --output $outputPath `
             '-p:BuildNumber=${{ steps.version.outputs.build }}' `
             '-p:BuildDate=${{ steps.version.outputs.date }}' `
@@ -76,7 +76,7 @@ jobs:
           dotnet publish src/Janitor.CLI/Janitor.CLI.csproj `
             --configuration '${{ inputs.build_type }}' `
             --runtime win-x64 `
-            --self-contained true `
+            --self-contained false `
             --output $outputPath `
             '-p:BuildNumber=${{ steps.version.outputs.build }}' `
             '-p:BuildDate=${{ steps.version.outputs.date }}' `

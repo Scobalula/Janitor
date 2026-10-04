@@ -29,6 +29,8 @@ Download the latest release ZIP, extract it, and run either:
 - `Janitor.UI.exe` for the graphical interface
 - `Janitor.CLI.exe` for the command-line interface
 
+Janitor currently requires .NET 10 and Windows 11 25H2 or later. Other versions of Windows may work, but are not confirmed.
+
 ## Using the UI
 
 Launch `Janitor.UI.exe` and select **Load Files** to load one or more Northlight `.rmdtoc` files.
