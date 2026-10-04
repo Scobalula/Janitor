@@ -2,22 +2,22 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Override with -p:RedFoxPackageVersion=<version> when using a local RedFox package feed. -->
-    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.4-local.gd2282de.t20261004090911</RedFoxPackageVersion>
+    <RedFoxPackageVersion Condition="'$(RedFoxPackageVersion)' == ''">2026.10.4-local.gf9365f7.t20261004201144</RedFoxPackageVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="RedFox.Audio" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Audio.Opus" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Compression.LZ4" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.GameExtraction" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.GameExtraction.CommandLine" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.GameExtraction.Hashing" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.GameExtraction.UI" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Graphics3D" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Graphics3D.Formats" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Imaging" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Imaging.Formats" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Imaging.Vulkan" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.IO" Version="2026.10.4-local.gf9365f7.t20261004193045" />
-    <PackageVersion Include="RedFox.Patterns" Version="2026.10.4-local.gf9365f7.t20261004193045" />
+    <PackageVersion Include="RedFox.Audio" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Audio.Opus" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Compression.LZ4" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.GameExtraction" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.GameExtraction.CommandLine" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.GameExtraction.Hashing" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.GameExtraction.UI" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Graphics3D" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Graphics3D.Formats" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Imaging" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Imaging.Formats" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Imaging.Vulkan" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.IO" Version="$(RedFoxPackageVersion)" />
+    <PackageVersion Include="RedFox.Patterns" Version="$(RedFoxPackageVersion)" />
   </ItemGroup>
 </Project>

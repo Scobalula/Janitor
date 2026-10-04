@@ -1,6 +1,7 @@
 using Janitor.Factory;
 using Janitor.Pack2FileSystem;
 using Janitor.Wwise;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.CommandLine;
 using RedFox.GameExtraction.Hashing;
@@ -40,21 +41,24 @@ internal sealed class NamesCommand : ICommandLineCommand
 
         VirtualFileSystem fileSystem = session.Manager.GetRequiredService<AssetFileSystemService>().FileSystem;
         NameTableManager nameTables = session.Manager.GetRequiredService<NameListService>().Manager;
+        ILogger logger = session.Manager.Logger;
         NameTable? boneTable = null;
         NameTable? mediaTable = null;
 
         Directory.CreateDirectory(JanitorAssetManagerFactory.NameTablesDirectory);
 
+        logger.LogInformation("Building {Target} name tables from {SourceCount} mounted sources", target, session.Manager.Sources.Count);
+
         await session.CreateProgress().StartAsync(async context =>
         {
             if (target is BonesKeyword or AllKeyword)
             {
-                boneTable = await BuildBoneTableAsync(session.Manager, fileSystem, nameTables, context, cancellationToken);
+                boneTable = await BuildBoneTableAsync(session.Manager, fileSystem, nameTables, context, cancellationToken, logger);
             }
 
             if (target is MediaKeyword or AllKeyword)
             {
-                mediaTable = BuildMediaTable(fileSystem, nameTables, context, cancellationToken);
+                mediaTable = BuildMediaTable(fileSystem, nameTables, context, cancellationToken, logger);
             }
         });
 
@@ -72,11 +76,14 @@ internal sealed class NamesCommand : ICommandLineCommand
 
     public IEnumerable<string> GetCompletions(CommandLineSession session, IReadOnlyList<string> arguments) => [BonesKeyword, MediaKeyword, AllKeyword];
 
-    private static async Task<NameTable> BuildBoneTableAsync(AssetManager manager, VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken)
+    private static async Task<NameTable> BuildBoneTableAsync(AssetManager manager, VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken, ILogger logger)
     {
         NameTable table = GetEmptyTable(nameTables, BoneTableName);
         List<Asset> skeletons = FindAssets(fileSystem, "*.binskeleton");
         ProgressTask task = context.AddTask("Bones", maxValue: skeletons.Count);
+
+        if (skeletons.Count == 0)
+            logger.LogWarning("No skeleton assets matching *.binskeleton were found; the {Table} name table will be empty", BoneTableName);
 
         foreach (Asset asset in skeletons)
         {
@@ -92,15 +99,20 @@ internal sealed class NamesCommand : ICommandLineCommand
 
         NameFile.Save(GetTablePath(BoneTableName), table, NameFileFlags.Checksum);
 
+        logger.LogInformation("Built {Table} name table with {NameCount} names from {SkeletonCount} skeletons", BoneTableName, table.Count, skeletons.Count);
+
         return table;
     }
 
-    private static NameTable BuildMediaTable(VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken)
+    private static NameTable BuildMediaTable(VirtualFileSystem fileSystem, NameTableManager nameTables, ProgressContext context, CancellationToken cancellationToken, ILogger logger)
     {
         NameTable table = GetEmptyTable(nameTables, WwiseMediaNameResolver.TableName);
         WwiseMediaNameResolver resolver = new();
         List<Asset> banks = FindAssets(fileSystem, "*.bnk");
         ProgressTask task = context.AddTask("Audio", maxValue: banks.Count);
+
+        if (banks.Count == 0)
+            logger.LogWarning("No sound bank assets matching *.bnk were found; the {Table} name table will be empty", WwiseMediaNameResolver.TableName);
 
         foreach (Asset asset in banks)
         {
@@ -121,6 +133,8 @@ internal sealed class NamesCommand : ICommandLineCommand
         }
 
         NameFile.Save(GetTablePath(WwiseMediaNameResolver.TableName), table, NameFileFlags.Checksum);
+
+        logger.LogInformation("Built {Table} name table with {NameCount} names from {BankCount} sound banks", WwiseMediaNameResolver.TableName, table.Count, banks.Count);
 
         return table;
     }

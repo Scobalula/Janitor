@@ -85,6 +85,22 @@ jobs:
             throw "Janitor.CLI publish failed with exit code $LASTEXITCODE"
           }
 
+          Copy-Item -LiteralPath 'LICENSE' -Destination (Join-Path $outputPath 'LICENSE') -Force
+          Copy-Item -LiteralPath 'THIRD-PARTY-NOTICES.md' -Destination (Join-Path $outputPath 'THIRD-PARTY-NOTICES.md') -Force
+          $licenseOutputPath = Join-Path $outputPath 'licenses'
+          New-Item -ItemType Directory -Path $licenseOutputPath -Force | Out-Null
+          Copy-Item -Path 'third_party/licenses/*' -Destination $licenseOutputPath -Recurse -Force
+
+          $openAlSourcePath = Join-Path $outputPath 'licenses/source/OpenAL-Soft-1.23.1-d3875f3.zip'
+          New-Item -ItemType Directory -Path (Split-Path $openAlSourcePath -Parent) -Force | Out-Null
+          Invoke-WebRequest `
+            -Uri 'https://github.com/kcat/openal-soft/archive/d3875f3.zip' `
+            -OutFile $openAlSourcePath
+          $openAlSourceHash = (Get-FileHash -LiteralPath $openAlSourcePath -Algorithm SHA256).Hash
+          if ($openAlSourceHash -ne '6696ED521B724D697A26BCD5BBD5680411258502C241275AF51791E3ECA1B79B') {
+            throw "OpenAL Soft source archive hash mismatch: $openAlSourceHash"
+          }
+
       - name: Archive release folder
         shell: pwsh
         run: |

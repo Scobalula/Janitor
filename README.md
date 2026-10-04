@@ -49,7 +49,7 @@ The search bar supports wildcard matching, making it easy to narrow large asset 
 
 The status bar at the bottom of the window displays the current asset count and the latest operation status.
 
-<!-- UI screenshot can be placed here -->
+![CLI](assets/UI-Screenshot.png)
 
 ## Using the CLI
 
@@ -57,7 +57,7 @@ Launch `Janitor.CLI.exe` to enter Janitor's interactive command-line interface.
 
 Commands such as `/mount` and `/help` can be used to manage sources and discover available functionality.
 
-<!-- CLI screenshot can be placed here -->
+![CLI](assets/CLI-Screenshot.png)
 
 ## Disclaimer
 

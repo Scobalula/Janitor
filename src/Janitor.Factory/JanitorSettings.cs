@@ -31,6 +31,7 @@ public static class JanitorSettings
             Description = "Read assets as-is from the package. This setting also affects the previewer.",
             DefaultValue = false,
         },
+        GameExtractionLogging.VerboseSetting,
         new GameExtractionSetting
         {
             Name = "ImageFormats",

@@ -1,5 +1,6 @@
 using Janitor.Animation;
 using Janitor.Pack2FileSystem;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
@@ -61,6 +62,8 @@ public class GraphResourceHandler : IAssetHandler
             scene.AddNode(animation);
             scenes.Add(scene);
         }
+
+        context.AssetManager.Logger.LogDebug("Read graph {Graph} with {SceneCount} clip scenes", asset.Name, scenes.Count);
 
         return Task.FromResult(new AssetReadResult
         {

@@ -1,6 +1,7 @@
 using Janitor.Acl;
 using Janitor.Pack2FileSystem;
 using Janitor.Animation;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
@@ -53,6 +54,8 @@ public class ClipResourceHandler : AnimationHandler
         var scene = new Scene(animation.Name);
 
         scene.AddNode(animation);
+
+        context.AssetManager.Logger.LogDebug("Read clip {Clip} with {TrackCount} tracks", animation.Name, animation.Tracks.Count);
 
         return Task.FromResult(new AssetReadResult
         {

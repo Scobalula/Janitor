@@ -1,4 +1,5 @@
 using Janitor.Pack2FileSystem;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.Graphics3D;
 using RedFox.IO;
@@ -60,6 +61,7 @@ public class SkeletonResourceHandler : IAssetHandler
             throw new NotSupportedException("Only Pack2File data sources are supported.");
 
         var skeletonScene = new Scene(Path.GetFileNameWithoutExtension(asset.Name));
+        ILogger logger = context.AssetManager.Logger;
 
         using var reader = new BinaryReader(file.Open());
 
@@ -133,6 +135,8 @@ public class SkeletonResourceHandler : IAssetHandler
 
         // Store the original table for skinning on an attribute.
         skeletonScene.SetAttribute("OriginalTable", bones);
+
+        logger.LogDebug("Read skeleton {Skeleton} with {BoneCount} bones", skeletonScene.Name, boneCount);
 
         return new AssetReadResult
         {

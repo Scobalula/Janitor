@@ -5,7 +5,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>Icon-NoGlow.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Icon-NoGlow.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="RedFox.GameExtraction.CommandLine" />

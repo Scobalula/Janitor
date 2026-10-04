@@ -1,5 +1,6 @@
 using Janitor.Pack2FileSystem;
 using Janitor.Wwise;
+using Microsoft.Extensions.Logging;
 using RedFox.Audio;
 using RedFox.Audio.IO;
 using RedFox.GameExtraction;
@@ -41,16 +42,26 @@ public class WwiseBankResourceHandler : IAssetHandler
 
         WwiseBank bank = WwiseBank.Read(file.ReadAllBytes(cancellationToken));
         NameListService names = context.GetRequiredService<NameListService>();
+        ILogger logger = context.AssetManager.Logger;
         List<AudioClip> clips = [];
+        int unsupported = 0;
 
         foreach (WwiseEmbeddedMedia media in bank.Media)
         {
             if (!_media.TryRead(media.Data, out AudioClip? clip))
+            {
+                unsupported++;
                 continue;
+            }
 
             clip.Name = names.Manager.TryGetValue(WwiseMediaNameResolver.TableName, media.Id, out string? name) ? $"{name}_{media.Id}" : media.Id.ToString();
             clips.Add(clip);
         }
+
+        if (unsupported > 0)
+            logger.LogWarning("Skipped {UnsupportedCount} of {MediaCount} media entries in {Bank} with unsupported codecs", unsupported, bank.Media.Count, asset.Name);
+
+        logger.LogDebug("Read Wwise bank {Bank} with {ClipCount} audio clips", asset.Name, clips.Count);
 
         return Task.FromResult(new AssetReadResult
         {

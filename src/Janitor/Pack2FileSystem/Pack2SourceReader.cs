@@ -1,5 +1,6 @@
 using Janitor.Metadata;
 using Janitor.Wwise;
+using Microsoft.Extensions.Logging;
 using RedFox.Compression;
 using RedFox.Compression.LZ4;
 using RedFox.GameExtraction;
@@ -45,6 +46,9 @@ public sealed class Pack2SourceReader : IAssetSourceReader
 
         if (!File.Exists(location))
             throw new FileNotFoundException("PAK file was not found.", location);
+
+        ILogger logger = assetManager.Logger;
+        logger.LogInformation("Opening Pack2 TOC {Location}", location);
 
         // We want to give the reader to the resulting archive
         // but if we fail we need to dispose of it
@@ -114,6 +118,8 @@ public sealed class Pack2SourceReader : IAssetSourceReader
             var classEntries = reader.ReadArray<ClassEntry>(classEntriesCount, classEntriesOffset);
             var packFileMetaDataBuffer = reader.Read(packFileMetaDataSize, packFileMetaDataOffset);
             var fileBufferInfoBuffer = reader.Read(fileBufferInfoSize, fileBufferInfoOffset);
+
+            logger.LogDebug("Pack2 TOC {TocName} version {Version}: {DirectoryCount} directories, {FileCount} files, {ReferenceCount} references, {ClassCount} classes, {DecompressedBytes} decompressed bytes", tocName, version, directoryEntriesCount, fileEntriesCount, referenceEntriesCount, classEntriesCount, totalBufferSize);
 
             var referenceEntrySize = version >= 3 ? 24 : 16;
 
@@ -218,6 +224,8 @@ public sealed class Pack2SourceReader : IAssetSourceReader
                 classWriter.WriteLine(resourceClass);
             }
 #endif
+
+            logger.LogInformation("Mounted Pack2 source {TocName} with {FileCount} files across {DirectoryCount} directories", tocName, toc.Files.Count, toc.Directories.Count);
 
             return toc;
         }

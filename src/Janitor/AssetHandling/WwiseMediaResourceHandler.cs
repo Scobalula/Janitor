@@ -1,5 +1,6 @@
 using Janitor.Pack2FileSystem;
 using Janitor.Wwise;
+using Microsoft.Extensions.Logging;
 using RedFox.Audio;
 using RedFox.Audio.IO;
 using RedFox.GameExtraction;
@@ -40,7 +41,10 @@ public class WwiseMediaResourceHandler : AudioClipHandler
         byte[] media = file.ReadAllBytes(cancellationToken);
 
         if (!_media.TryRead(media, out AudioClip? clip))
+        {
+            context.AssetManager.Logger.LogDebug("Read media {Media} as raw bytes with an unsupported codec", asset.Name);
             return Task.FromResult(new AssetReadResult { Asset = asset, Handler = this, Data = media });
+        }
 
         clip.Name = Path.GetFileNameWithoutExtension(asset.Name);
 

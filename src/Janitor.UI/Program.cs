@@ -8,7 +8,7 @@ namespace Janitor.UI;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
         GameExtractionConfig config = new()
         {
@@ -34,6 +34,6 @@ internal static class Program
             },
         };
 
-        GameExtractionApp.Run(config);
+        GameExtractionApp.Run(config, args);
     }
 }

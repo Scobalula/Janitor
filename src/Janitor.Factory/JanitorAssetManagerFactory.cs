@@ -1,7 +1,7 @@
 using Janitor.AssetHandling;
 using Janitor.Pack2FileSystem;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
-using System.Diagnostics;
 
 namespace Janitor.Factory;
 
@@ -23,6 +23,8 @@ public static class JanitorAssetManagerFactory
     public static AssetManager Create()
     {
         AssetManager manager = new();
+        ILogger logger = manager.Logger;
+
         manager.RegisterService(new AssetFileSystemService(manager));
 
         manager.RegisterSourceReader(new Pack2SourceReader());
@@ -43,13 +45,8 @@ public static class JanitorAssetManagerFactory
         manager.RegisterService<ResourceTableService>();
         manager.RegisterService(NameListService.CreateFromDirectory(NameTablesDirectory));
 
-        manager.OperationFailed += Manager_OperationFailed;
+        logger.LogDebug("Created Janitor asset manager with {HandlerCount} handlers and {ReaderCount} source readers", manager.Handlers.Count, manager.SourceReaders.Count);
 
         return manager;
-    }
-
-    private static void Manager_OperationFailed(object? sender, AssetOperationFailedEventArgs e)
-    {
-        Trace.WriteLine(e.Exception);
     }
 }

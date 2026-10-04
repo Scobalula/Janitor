@@ -1,5 +1,6 @@
 using Janitor.Metadata;
 using Janitor.Pack2FileSystem;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
@@ -63,6 +64,7 @@ public class MaterialResourceHandler : IAssetHandler
 
         var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
         var material = new Material(Path.GetFileNameWithoutExtension(asset.Name));
+        ILogger logger = context.AssetManager.Logger;
 
         var version = reader.ReadUInt32();
 
@@ -130,6 +132,8 @@ public class MaterialResourceHandler : IAssetHandler
         var flag1 = reader.ReadByte();
         var flag2 = reader.ReadByte();
         var flag3 = reader.ReadByte();
+
+        logger.LogDebug("Read material {Material} version 0x{Version:X8} with {TextureCount} texture references", material.Name, version, textureResourceIds.Length);
 
         return new AssetReadResult
         {

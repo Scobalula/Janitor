@@ -1,5 +1,6 @@
 using Janitor.Metadata;
 using Janitor.Pack2FileSystem;
+using Microsoft.Extensions.Logging;
 using RedFox.GameExtraction;
 using RedFox.GameExtraction.AssetHandlers;
 using RedFox.Graphics3D;
@@ -45,6 +46,9 @@ public class MeshResourceHandler : ModelHandler
 
         var resourceTable = context.GetRequiredService<ResourceTableService>().Resources;
         var modelName = Path.GetFileNameWithoutExtension(asset.Name);
+        ILogger logger = context.AssetManager.Logger;
+
+        logger.LogDebug("Reading mesh {Model} from {Path}", modelName, file.FullPath);
 
         // Files may start with a MeshCPU block (version 1, CPU-side triangle data); the mesh header follows it.
         reader.BaseStream.Position = meshMetadata.MeshCpuBytes;
@@ -337,6 +341,8 @@ public class MeshResourceHandler : ModelHandler
         if (reader.BaseStream.Position != meshMetadata.CpuNumBytes)
             throw new InvalidDataException($"Mesh header of '{file.FullPath}' ended at 0x{reader.BaseStream.Position:X}, metadata says 0x{meshMetadata.CpuNumBytes:X}.");
 
+        logger.LogDebug("Mesh {Model} version 0x{Version:X}: {LodCount} LODs, {PrimitiveCount} primitives, {VariantCount} variants", modelName, version, lodCount, primitives.Count, variants.Count);
+
         var lods = BuildLods(meshMetadata, lodCount, primitives);
         MeshLod[] nonEmptyLods = lods.Where(lod => lod.Primitives.Count > 0).ToArray();
         MeshLod[] lodsToRead = nonEmptyLods;
@@ -414,6 +420,8 @@ public class MeshResourceHandler : ModelHandler
             if (!exportAllLods)
                 break;
         }
+
+        logger.LogDebug("Read mesh {Model} into {SceneCount} scenes", modelName, scenes.Count);
 
         return new AssetReadResult
         {
