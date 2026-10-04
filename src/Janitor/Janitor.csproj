@@ -30,4 +30,13 @@
     <PackageReference Include="RedFox.Patterns" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="NameTables\BoneTable.namefile">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="NameTables\WwiseMediaTable.namefile">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
