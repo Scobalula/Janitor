@@ -108,20 +108,39 @@ public class MaterialResourceHandler : IAssetHandler
         }
 
         // Finally bind the materials/textures
-        if (material.TryGetAttribute<int>("ColorMap", out var colorMapIndex))
+        // TODO: Could do with a better way of doing this
+        // Could do a refactor of how RedFox handles this
+        if (material.Attributes is not null)
         {
-            material.DiffuseMapName = "ColorMap";
-            material.DiffuseMap = textureTable[colorMapIndex];
-        }
-        if (material.TryGetAttribute<int>("NormalMap", out var normalMapIndex))
-        {
-            material.NormalMapName = "NormalMap";
-            material.NormalMap = textureTable[normalMapIndex];
-        }
-        if (material.TryGetAttribute<int>("SpecularColorMap", out var specularColorMapIndex))
-        {
-            material.SpecularMapName = "SpecularColorMap";
-            material.SpecularMap = textureTable[specularColorMapIndex];
+            foreach (var (key, value) in material.Attributes)
+            {
+                if (value is not MaterialTextureSlot slot)
+                    continue;
+
+                var slotTexture = textureTable[slot.Index];
+
+                if (slotTexture is null)
+                    continue;
+
+                switch (key)
+                {
+                    case "ColorMap":
+                        material.DiffuseMapName = key;
+                        material.DiffuseMap = slotTexture;
+                        break;
+                    case "NormalMap":
+                        material.NormalMapName = key;
+                        material.NormalMap = slotTexture;
+                        break;
+                    case "SpecularMap":
+                        material.SpecularMapName = key;
+                        material.SpecularMap = slotTexture;
+                        break;
+                    default:
+                        material.Connect(key, slotTexture);
+                        break;
+                }
+            }
         }
 
         // Trailing material descriptor fields.
@@ -209,7 +228,7 @@ public class MaterialResourceHandler : IAssetHandler
                 1  => new Vector2(reader.ReadSingle(), reader.ReadSingle()),
                 2  => new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
                 3  => new Vector4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle()),
-                4  => reader.ReadInt32(),
+                4  => new MaterialTextureSlot(reader.ReadInt32()),
                 5  => reader.ReadInt32(),
                 6  => reader.ReadInt64(),
                 12 => reader.ReadByte(),
