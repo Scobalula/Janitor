@@ -129,6 +129,25 @@ public static class JanitorSettings
         },
         new GameExtractionSetting
         {
+            Name = "FlipModelsAxis",
+            Group = GameExtractionSettingGroup.General,
+            Label = "Flip models on an axis",
+            Description = "Mirror model geometry, skeletons and animations across the chosen axis.",
+            Type = GameExtractionSettingType.Choice,
+            Options = ["None", "X", "Y", "Z"],
+            DefaultValue = "Z",
+        },
+        new GameExtractionSetting
+        {
+            Name = "ModelScale",
+            Group = GameExtractionSettingGroup.General,
+            Label = "Model scale",
+            Description = "Multiplier applied to mesh, skeleton and animation positions.",
+            Type = GameExtractionSettingType.Text,
+            DefaultValue = "100",
+        },
+        new GameExtractionSetting
+        {
             Name = "AnimationFormats",
             Group = GameExtractionSettingGroup.Animation,
             Label = "Animation formats",

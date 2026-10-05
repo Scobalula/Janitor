@@ -49,6 +49,9 @@ public class GraphResourceHandler : IAssetHandler
 
         context.TryGetService<NameListService>(out var nameList);
 
+        var flipModelsAxis = AxisFlip.Parse(context.Configuration.GetOption("FlipModelsAxis", "None"));
+        var modelScale = ModelScale.Read(context.Configuration);
+
         foreach (var clipResourceId in graphs.SelectMany(x => x.ClipResourceIds).Distinct())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -56,7 +59,7 @@ public class GraphResourceHandler : IAssetHandler
             if (!resourceTable.TryGetValue(clipResourceId, out var clipFile))
                 throw new KeyNotFoundException($"Clip resource with ID 0x{clipResourceId:X16} not found in resource table.");
 
-            var animation = ClipResourceHandler.ReadAnimation(clipFile, nameList, graphs.SelectMany(x => x.AdditiveClips).FirstOrDefault(x => x.ClipResourceId == clipResourceId));
+            var animation = ClipResourceHandler.ReadAnimation(clipFile, nameList, graphs.SelectMany(x => x.AdditiveClips).FirstOrDefault(x => x.ClipResourceId == clipResourceId), flipModelsAxis, modelScale);
             var scene = new Scene(animation.Name);
 
             scene.AddNode(animation);

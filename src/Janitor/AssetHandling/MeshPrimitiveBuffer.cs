@@ -14,6 +14,10 @@ public class MeshPrimitiveBuffer
     public required MeshAttributeBuffer NormalBuffer { get; init; }
     public required MeshAttributeBuffer UVBuffer { get; init; }
 
+    public FlipAxis MirrorAxis { get; init; }
+
+    public float OutputScale { get; init; } = ModelScale.Default;
+
     public List<MeshAttributeBuffer> BlendIndicesBuffers { get; init; } = [];
     public List<MeshAttributeBuffer> BlendWeightsBuffers { get; init; } = [];
 
@@ -45,8 +49,14 @@ public class MeshPrimitiveBuffer
             v[1] = newY;
         }
 
-        outputMesh.Positions!.Add((new Vector3(positionX, positionY, positionZ) * Primitive.Scale + Primitive.Center) * 100);
-        outputMesh.Normals!.Add(v);
+        var position = (new Vector3(positionX, positionY, positionZ) * Primitive.Scale + Primitive.Center) * OutputScale;
+        var normal = v;
+
+        position = AxisFlip.Mirror(position, MirrorAxis);
+        normal = AxisFlip.Mirror(normal, MirrorAxis);
+
+        outputMesh.Positions!.Add(position);
+        outputMesh.Normals!.Add(normal);
         outputMesh.UVLayers!.Add(new Vector2(uvX, uvY));
 
         if (outputMesh.Skin is { } skin)

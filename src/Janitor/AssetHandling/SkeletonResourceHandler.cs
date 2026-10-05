@@ -61,6 +61,8 @@ public class SkeletonResourceHandler : IAssetHandler
             throw new NotSupportedException("Only Pack2File data sources are supported.");
 
         var skeletonScene = new Scene(Path.GetFileNameWithoutExtension(asset.Name));
+        var flipModelsAxis = AxisFlip.Parse(context.Configuration.GetOption("FlipModelsAxis", "None"));
+        var modelScale = ModelScale.Read(context.Configuration);
         ILogger logger = context.AssetManager.Logger;
 
         using var reader = new BinaryReader(file.Open());
@@ -96,11 +98,12 @@ public class SkeletonResourceHandler : IAssetHandler
         for (var i = 0; i < boneCount; i++)
         {
             var rotation = reader.ReadStruct<Quaternion>();
-            var position = reader.ReadStruct<Vector4>() * 100.0f;
+            var position = reader.ReadStruct<Vector4>() * modelScale;
+            var localPosition = new Vector3(position.X, position.Y, position.Z);
 
             var bone = new SkeletonBone($"bone_{i}");
-            bone.BindTransform.LocalRotation = rotation;
-            bone.BindTransform.LocalPosition = new Vector3(position.X, position.Y, position.Z);
+            bone.BindTransform.LocalRotation = AxisFlip.Mirror(rotation, flipModelsAxis);
+            bone.BindTransform.LocalPosition = AxisFlip.Mirror(localPosition, flipModelsAxis);
             bone.BindTransform.Scale = Vector3.One;
 
             bones[i] = bone;

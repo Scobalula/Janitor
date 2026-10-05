@@ -17,8 +17,6 @@ namespace Janitor.AssetHandling;
 /// </summary>
 public class ClipResourceHandler : AnimationHandler
 {
-    private const float PositionScale = 100.0f;
-
     private const int RelocationInfoOffset = 16;
 
     private const int RawCompression = 0;
@@ -50,7 +48,9 @@ public class ClipResourceHandler : AnimationHandler
 
         context.TryGetService<NameListService>(out var nameList);
 
-        var animation = ReadAnimation(file, nameList, null);
+        var flipModelsAxis = AxisFlip.Parse(context.Configuration.GetOption("FlipModelsAxis", "None"));
+        var modelScale = ModelScale.Read(context.Configuration);
+        var animation = ReadAnimation(file, nameList, null, flipModelsAxis, modelScale);
         var scene = new Scene(animation.Name);
 
         scene.AddNode(animation);
@@ -71,9 +71,11 @@ public class ClipResourceHandler : AnimationHandler
     /// <param name="file">The clip file.</param>
     /// <param name="nameList">The name tables bone names are resolved from, if any.</param>
     /// <param name="additiveClip">The additive use of the clip, or <see langword="null"/> to read its absolute transforms.</param>
+    /// <param name="flipAxis">The axis to mirror the clip across, matching the skeleton it animates.</param>
+    /// <param name="modelScale">The multiplier applied to clip translations, matching the skeleton it animates.</param>
     /// <returns>The animation.</returns>
     /// <exception cref="NotSupportedException">Thrown when the clip version or compression is not supported.</exception>
-    public static SkeletonAnimation ReadAnimation(Pack2File file, NameListService? nameList, AdditiveClip? additiveClip)
+    public static SkeletonAnimation ReadAnimation(Pack2File file, NameListService? nameList, AdditiveClip? additiveClip, FlipAxis flipAxis, float modelScale)
     {
         // * Bones are only referenced by the FNV-1a hash of their lower case name, names are resolved from the "BoneTable" name table.
         // * The trajectory is the root motion of the clip, the first bone is the skeleton root and is relative to it, so we apply it there.
@@ -97,7 +99,7 @@ public class ClipResourceHandler : AnimationHandler
 
         var curveNames = ReadCurveNames(reader, header);
 
-        ReadBoneTracks(reader, header, animation, nameList, additiveClip);
+        ReadBoneTracks(reader, header, animation, nameList, additiveClip, flipAxis, modelScale);
         ReadBoneVisibility(reader, header, animation);
         ReadCurves(reader, header, animation, curveNames);
         ReadEvents(reader, header, animation, curveNames);
@@ -106,7 +108,7 @@ public class ClipResourceHandler : AnimationHandler
         return animation;
     }
 
-    private static void ReadBoneTracks(BinaryReader reader, ClipHeader header, SkeletonAnimation animation, NameListService? nameList, AdditiveClip? additiveClip)
+    private static void ReadBoneTracks(BinaryReader reader, ClipHeader header, SkeletonAnimation animation, NameListService? nameList, AdditiveClip? additiveClip, FlipAxis flipAxis, float modelScale)
     {
         var boneHashes = reader.ReadStructArray<uint>(header.BoneCount, ReadRelativeOffset(reader, header.BoneHashesField)).ToArray();
         var boneTracks = reader.ReadInt32(header.BoneTracksField) == 0 ? [] : ReadTransformTracks(reader, header, header.BoneTracksField, header.BoneCount);
@@ -115,7 +117,7 @@ public class ClipResourceHandler : AnimationHandler
         if (trajectory is not null && boneTracks.Length > 0 && additiveClip is null)
             ApplyTrajectory(boneTracks[0], trajectory, header.FrameCount);
         if (trajectory is not null && boneTracks.Length == 0)
-            animation.Tracks.Add(CreateTrack(TrajectoryTrackName, trajectory, TransformType.Absolute));
+            animation.Tracks.Add(CreateTrack(TrajectoryTrackName, trajectory, TransformType.Absolute, flipAxis, modelScale));
 
         for (var i = 0; i < header.BoneCount; i++)
         {
@@ -128,7 +130,7 @@ public class ClipResourceHandler : AnimationHandler
             if (isAdditive)
                 SubtractBasePose(boneTracks[i], inverseBasePose);
 
-            animation.Tracks.Add(CreateTrack(name, boneTracks[i], isAdditive ? TransformType.Additive : TransformType.Absolute));
+            animation.Tracks.Add(CreateTrack(name, boneTracks[i], isAdditive ? TransformType.Additive : TransformType.Absolute, flipAxis, modelScale));
         }
     }
 
@@ -249,7 +251,7 @@ public class ClipResourceHandler : AnimationHandler
         track.Scales = [];
     }
 
-    private static SkeletonAnimationTrack CreateTrack(string name, AclTransformTrack source, TransformType transformType)
+    private static SkeletonAnimationTrack CreateTrack(string name, AclTransformTrack source, TransformType transformType, FlipAxis flipAxis, float modelScale)
     {
         var track = new SkeletonAnimationTrack(name)
         {
@@ -263,11 +265,18 @@ public class ClipResourceHandler : AnimationHandler
             if (frame > 0 && Quaternion.Dot(source.Rotations[frame - 1], source.Rotations[frame]) < 0)
                 source.Rotations[frame] = Quaternion.Negate(source.Rotations[frame]);
 
-            track.AddRotationFrame(frame, source.Rotations[frame]);
+            var rotation = source.Rotations[frame];
+
+            track.AddRotationFrame(frame, AxisFlip.Mirror(rotation, flipAxis));
         }
 
         for (var frame = 0; frame < source.Translations.Length; frame++)
-            track.AddTranslationFrame(frame, source.Translations[frame] * PositionScale);
+        {
+            var translation = source.Translations[frame] * modelScale;
+
+            track.AddTranslationFrame(frame, AxisFlip.Mirror(translation, flipAxis));
+        }
+
         for (var frame = 0; frame < source.Scales.Length; frame++)
             track.AddScaleFrame(frame, source.Scales[frame]);
 

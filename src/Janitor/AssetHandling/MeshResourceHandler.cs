@@ -392,6 +392,8 @@ public class MeshResourceHandler : ModelHandler
 
         var scenes = new List<Scene>(lodsToRead.Length * variantsToRead.Length);
         var exportAllLods = context.Configuration.GetOption<bool>("ReadAllLODs");
+        var flipModelsAxis = AxisFlip.Parse(context.Configuration.GetOption("FlipModelsAxis", "None"));
+        var modelScale = ModelScale.Read(context.Configuration);
 
         foreach (var lod in lodsToRead)
         {
@@ -404,7 +406,7 @@ public class MeshResourceHandler : ModelHandler
             var skinBones = skeletonScene?.GetAttribute<SkeletonBone[]>("OriginalTable");
             var meshes = lod.Primitives.Select(primitive =>
             {
-                return ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones, cancellationToken);
+                return ReadMesh(primitive, vertexBytes, positionOnlyVertexBytes, indexBytes, boneMap, skinBones, flipModelsAxis, modelScale, cancellationToken);
             }).ToArray();
 
             // Variants only swap materials, so every variant of a LOD shares the same geometry buffers.
@@ -431,7 +433,7 @@ public class MeshResourceHandler : ModelHandler
         };
     }
 
-    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones, CancellationToken cancellationToken)
+    private static Mesh ReadMesh(MeshPrimitive primitive, byte[] vertexBytes, byte[] positionOnlyVertexBytes, byte[] indexBytes, List<int> boneMap, SkeletonBone[]? skinBones, FlipAxis flipModelsAxis, float modelScale, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -444,6 +446,8 @@ public class MeshResourceHandler : ModelHandler
             PositionBuffer = BindAttribute(positionsAttribute, primitive, vertexBytes, positionOnlyVertexBytes),
             NormalBuffer = BindAttribute(FindAttribute(primitive, 1), primitive, vertexBytes, positionOnlyVertexBytes),
             UVBuffer = BindAttribute(FindAttribute(primitive, 2), primitive, vertexBytes, positionOnlyVertexBytes),
+            MirrorAxis = flipModelsAxis,
+            OutputScale = modelScale,
             BoneMap = boneMap
         };
 
@@ -470,17 +474,27 @@ public class MeshResourceHandler : ModelHandler
 
         // The game passes 1 big buffer to the GPU for all submeshes, so indices are global,
         // we build a map to make them local to this mesh for intermediate formats.
-        for (int i = 0; i < primitive.FaceCount * 3; i++)
+        var faceIndices = new int[3];
+
+        for (int face = 0; face < primitive.FaceCount; face++)
         {
-            if ((i & 0x3FFF) == 0)
+            if ((face & 0x1FFF) == 0)
                 cancellationToken.ThrowIfCancellationRequested();
 
-            var index = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
+            for (int vertex = 0; vertex < 3; vertex++)
+            {
+                var index = primitive.FaceIndexSize == 4 ? faceReader.Read<int>() : faceReader.Read<ushort>();
 
-            if (vertexMap[index] == 0)
-                vertexMap[index] = buffer.CreateVertexOnOutputMesh(index, mesh);
+                if (vertexMap[index] == 0)
+                    vertexMap[index] = buffer.CreateVertexOnOutputMesh(index, mesh);
 
-            mesh.FaceIndices.Add(vertexMap[index] - 1);
+                faceIndices[vertex] = vertexMap[index] - 1;
+            }
+
+            // Mirroring across an axis reverses triangle orientation, so flip the winding to keep faces front-facing.
+            mesh.FaceIndices.Add(faceIndices[0]);
+            mesh.FaceIndices.Add(flipModelsAxis == FlipAxis.None ? faceIndices[1] : faceIndices[2]);
+            mesh.FaceIndices.Add(flipModelsAxis == FlipAxis.None ? faceIndices[2] : faceIndices[1]);
         }
 
         return mesh;
