@@ -521,9 +521,10 @@ public class MeshResourceHandler : ModelHandler
         }
 
         var materialClones = new Dictionary<Material, Material>();
+        var materialGroup = scene.AddNode<Group>("Materials");
 
         foreach (var material in materials.Distinct())
-            materialClones[material] = scene.AddNode((Material)material.Clone());
+            materialClones[material] = materialGroup.AddNode((Material)material.Clone());
 
         for (int i = 0; i < meshes.Length; i++)
         {
